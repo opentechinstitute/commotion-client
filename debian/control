@@ -1,0 +1,21 @@
+Source: commotion-linux-py
+Maintainer: Jordan McCarthy <mccarthy@opentechinstitute.org>
+Homepage: https://github.opentechinstitute.org/commotion-linux-py
+Section: net
+Priority: extra
+Build-Depends: python-all (>= 2.6.6-3~)
+Package: commotion-linux-py
+Architecture: amd64
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         python,
+         python-support,
+         olsrd, 
+         olsrd-plugins
+         python-pyjavaproperties 
+Recommends: nm-dispatcher-olsrd, 
+            commotion-mesh-applet 
+Description: Implements core Commotion (mesh networking with olsrd, serval, etc.) functionality as a python module
+ Provides fundamental Commotion routines for use by a variety of front-end utilities.  Also provides a custom-compiled
+ version of wpa_supplicant for use on older systems whose stock wpa_supplicant binaries were compiled without support
+ for encrypted mesh connections (IBSS-RSN).   

@@ -2,12 +2,8 @@
 
 import dbus.mainloop.glib ; dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 import glob
-import json
-import NetworkManager
 import os
 import pyjavaproperties
-import sys
-import urllib2
 
 import pprint
 import subprocess
@@ -158,20 +154,16 @@ class CommotionCore():
         print subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
         self.startOlsrd(interface, profile['conf'])
 
-
+#TODO
 #    def write_wpasupplicant_config(self, profile):
-#	
-#Depends: iw
-#
-
 #    def check_chipset
 
 #    def startCommotion
 #    def stopCommotion
-#Wrappers for standard connect and fallback, and disconnection routine (which should not be in nm-dispatcher, after all)
-# Can be the basis of any easy-to-use command line engine
+#    Wrappers for standard connect and fallback, and disconnection routine (which should not be in nm-dispatcher, after all)
+#    Can be the basis of any easy-to-use command line engine
 
 #    Couch all subprocess commands in the sort of structure shown for startOlsrd?
 #    Finish replacing all static mentions of '/etc/nm... with a variable
 
-
+#    Remove pyjavaproperties
