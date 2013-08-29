@@ -150,7 +150,7 @@ class CommotionCore():
         print subprocess.check_call(['/usr/bin/pkill', '-9', 'wpa_supplicant'])
         ##Check for existance of replacement binary
         self._log('Starting replacement wpa_supplicant with profile ' + profileid + ', interface ' + interface + ', and ip address ' + ip + '.')
-        subprocess.Popen(['/usr/share/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + os.path.join('/etc/nm-dispatcher-olsrd', profileid + '.wpasupplicant')])
+        subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + os.path.join('/etc/nm-dispatcher-olsrd', profileid + '.wpasupplicant')])
         print subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
         self.startOlsrd(interface, profile['conf'])
 
