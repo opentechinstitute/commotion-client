@@ -1,0 +1,8 @@
+debian/files
+debian/commotion-linux-py.debhelper.log
+debian/commotion-linux-py.substvars
+debian/commotion-linux-py/
+# python build products
+*.pyc
+# example code
+examples/

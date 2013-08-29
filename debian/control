@@ -4,6 +4,7 @@ Homepage: https://github.opentechinstitute.org/commotion-linux-py
 Section: net
 Priority: extra
 Build-Depends: python-all (>= 2.6.6-3~)
+
 Package: commotion-linux-py
 Architecture: amd64
 Depends: ${shlibs:Depends},
@@ -11,7 +12,7 @@ Depends: ${shlibs:Depends},
          python,
          python-support,
          olsrd, 
-         olsrd-plugins
+         olsrd-plugins,
          python-pyjavaproperties 
 Recommends: nm-dispatcher-olsrd, 
             commotion-mesh-applet 
