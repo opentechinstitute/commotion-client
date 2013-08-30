@@ -163,7 +163,9 @@ class CommotionCore():
 #    Wrappers for standard connect and fallback, and disconnection routine (which should not be in nm-dispatcher, after all)
 #    Can be the basis of any easy-to-use command line engine
 
-#    Couch all subprocess commands in the sort of structure shown for startOlsrd?
+#    Couch all subprocess commands in the sort of structure shown for startOlsrd, to allow for proper output
 #    Finish replacing all static mentions of '/etc/nm... with a variable
 
 #    Remove pyjavaproperties
+#    Add commotionwireless.net wpasupplicant file to package
+#    Decompose fallback routine itself, such that it doesn't even need to be installed by default?
