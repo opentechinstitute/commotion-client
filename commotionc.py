@@ -2,21 +2,21 @@
 
 import dbus.mainloop.glib ; dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 import glob
+import hashlib
 import os
-import pyjavaproperties
-
 import pprint
-import subprocess
+import pyjavaproperties
 import random
 import re
-import struct
 import socket
+import struct
+import subprocess
 
 class CommotionCore():
 
     def __init__(self, f=None):
         self.olsrdconf = '/etc/olsrd/olsrd.conf'
-        self.profiledir = '/etc/nm-dispatcher-olsrd/'
+        self.profiledir = '/etc/commotion/profiles.d'
         if f:
             self.f = open(f, 'ab')
         else:
@@ -52,7 +52,7 @@ class CommotionCore():
 
 
     def readProfile(self, profname):
-        f = os.path.join('/etc/nm-dispatcher-olsrd/', profname + '.profile')
+        f = os.path.join(self.profiledir, profname + '.profile')
         p = pyjavaproperties.Properties()
         p.load(open(f))
         profile = dict()
@@ -60,15 +60,16 @@ class CommotionCore():
         profile['mtime'] = os.path.getmtime(f)
         for k,v in p.items():
             profile[k] = v
-        for param in ('ssid', 'bssid', 'channel', 'ip', 'netmask', 'dns', 'ipgenerate'): ##Also validate ip, dns, bssid, channel?
+        for param in ('ssid', 'channel', 'ip', 'netmask', 'dns', 'ipgenerate'): ##Also validate ip, dns, bssid, channel?
             if param not in profile:
                 self._log('Error in ' + f + ': missing or malformed ' + param + ' option') ## And raise some sort of error?
         if profile['ipgenerate'] in ('True', 'true', 'Yes', 'yes', '1'): # and not profile['randomip']
             profile['ip'] = self._generate_ip(profile['ip'], profile['netmask'])
-            if os.access(f, os.W_OK):
-                self.updateProfile(profname, {'ipgenerate': 'false', 'ip': profile['ip']})
-            else:
-               self._log('Unable to write to ' + f + ', so ip address was not updated')
+            self.updateProfile(profname, {'ipgenerate': 'false', 'ip': profile['ip']})
+        if not 'bssid' in profile: #Include note in default config file that bssid parameter is allowed, but should almost never be used
+            bssid = hashlib.new('md4', ssid).hexdigest()[-8:].upper() + '%02X' %int(profile['channel']) #or 'md5', [:8]
+            profile['bssid'] = ':'.join(a+b for a,b in zip(bssid[::2], bssid[1::2]))
+
         conf = re.sub('(.*)\.profile', r'\1.conf', f)
         if os.path.exists(conf):
             self._log('profile has custom olsrd.conf: "' + conf + '"')
@@ -84,7 +85,7 @@ class CommotionCore():
         profiles = dict()
         self._log('\n----------------------------------------')
         self._log('Reading profiles:')
-        for f in glob.glob('/etc/nm-dispatcher-olsrd/*.profile'):
+        for f in glob.glob(self.profiledir + '*.profile'):
             profname = os.path.split(re.sub('\.profile$', '', f))[1]
             self._log('reading profile: "' + f + '"')
             profile = self.readProfile(profname)
@@ -94,8 +95,11 @@ class CommotionCore():
 
 
     def updateProfile(self, profname, params):
+        if not os.access(f, os.W_OK):
+            self._log('Unable to write to ' + f + ', so \"' + profname + '\" was not updated')
+            return
         savedsettings = []
-        pf = open(os.path.join('/etc/nm-dispatcher-olsrd', profname + '.profile'), 'r')
+        pf = open(os.path.join(self.profiledir, profname + '.profile'), 'r')
         for line in pf:
             savedsettings.append(line)
             for param, value in params.iteritems():
@@ -103,7 +107,7 @@ class CommotionCore():
                     savedsettings[-1] = (param + '=' + value + '\n')
                     break
         pf.close()
-        pf = open(os.path.join('/etc/nm-dispatcher-olsrd', profname + '.profile'), 'w')
+        pf = open(os.path.join(self.profiledir, profname + '.profile'), 'w')
         for line in savedsettings:
             pf.write(line)
 
@@ -137,7 +141,7 @@ class CommotionCore():
 
 
     def fallbackConnect(self, profileid):
-        if not os.path.exists(os.path.join('/etc/nm-dispatcher-olsrd', profileid + '.wpasupplicant')):
+        if not os.path.exists(os.path.join(self.profiledir, profileid + '.wpasupplicant')):
             self._log('No wpasupplicant config file available! Stopping...')
             return 1 ##And/or raise error
         profile = self.readProfile(profileid)
@@ -145,12 +149,13 @@ class CommotionCore():
         interface = interface[interface.index('Interface') + 1]
         ip = profile['ip']
         self._log('Putting network manager to sleep:')
-        if 'running' in subprocess.check_output(['nmcli', 'nm', 'status']):
+        if 'connected' in subprocess.check_output(['nmcli', 'nm', 'status']): #Connected in this case means "active," not just "connected to a network"
             print subprocess.check_call(['/usr/bin/nmcli', 'nm', 'sleep', 'true'])
+            print subprocess.call(['/usr/bin/pkill', '-9', 'nm-dispatcher-olsrd']) ##TODO: Could be problematic.   Needed to ensure that a slow dispatcher process doesn't kill our fallback call to startOlsrd.
         print subprocess.check_call(['/usr/bin/pkill', '-9', 'wpa_supplicant'])
         ##Check for existance of replacement binary
         self._log('Starting replacement wpa_supplicant with profile ' + profileid + ', interface ' + interface + ', and ip address ' + ip + '.')
-        subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + os.path.join('/etc/nm-dispatcher-olsrd', profileid + '.wpasupplicant')])
+        subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + os.path.join(self.profiledir, profileid + '.wpasupplicant')])
         print subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
         self.startOlsrd(interface, profile['conf'])
 
@@ -165,7 +170,10 @@ class CommotionCore():
 
 #    Couch all subprocess commands in the sort of structure shown for startOlsrd, to allow for proper output
 #    Finish replacing all static mentions of '/etc/nm... with a variable
+#    Restructure files so that everything is inside of "commotion" directories (in etc, pyshared, share, etc.)
 
 #    Remove pyjavaproperties
 #    Add commotionwireless.net wpasupplicant file to package
 #    Decompose fallback routine itself, such that it doesn't even need to be installed by default?
+# Driver check
+#TODO: Ifconfig may need to be brought down/up to allow olsrd to work correctly.  Should be brought down anyway
