@@ -11,6 +11,7 @@ import re
 import socket
 import struct
 import subprocess
+import time
 
 class CommotionCore():
 
@@ -151,13 +152,15 @@ class CommotionCore():
         self._log('Putting network manager to sleep:')
         if 'connected' in subprocess.check_output(['nmcli', 'nm', 'status']): #Connected in this case means "active," not just "connected to a network"
             print subprocess.check_call(['/usr/bin/nmcli', 'nm', 'sleep', 'true'])
-            print subprocess.call(['/usr/bin/pkill', '-9', 'nm-dispatcher-olsrd']) ##TODO: Could be problematic.   Needed to ensure that a slow dispatcher process doesn't kill our fallback call to startOlsrd.
         print subprocess.check_call(['/usr/bin/pkill', '-9', 'wpa_supplicant'])
+        print subprocess.check_call(['/sbin/ifconfig', interface, 'down'])
         ##Check for existance of replacement binary
         self._log('Starting replacement wpa_supplicant with profile ' + profileid + ', interface ' + interface + ', and ip address ' + ip + '.')
         subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + os.path.join(self.profiledir, profileid + '.wpasupplicant')])
-        print subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
+        time.sleep(2)
         self.startOlsrd(interface, profile['conf'])
+        time.sleep(2)
+        print subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
 
 #TODO
 #    def write_wpasupplicant_config(self, profile):
