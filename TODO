@@ -1,0 +1,19 @@
+#TODO
+#    def write_wpasupplicant_config(self, profile):
+#    def check_chipset
+
+#    def startCommotion
+#    def stopCommotion
+#    Wrappers for standard connect and fallback, and disconnection routine (which should not be in nm-dispatcher, after all)
+#    Can be the basis of any easy-to-use command line engine
+
+#    Couch all subprocess commands in the sort of structure shown for startOlsrd, to allow for proper output
+#    Finish replacing all static mentions of '/etc/nm... with a variable
+#    Restructure files so that everything is inside of "commotion" directories (in etc, pyshared, share, etc.)
+
+#    Remove pyjavaproperties
+#    Add autogeneration routine for .wpasupplicant files, or at least a check
+#    Decompose fallback routine itself, such that it doesn't even need to be installed by default?
+#    Driver check
+#    Allow specification/choice of interface, in cases where there is more than one option
+#    Replace ifconfig call with ip call?

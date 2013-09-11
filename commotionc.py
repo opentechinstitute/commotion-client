@@ -154,6 +154,7 @@ class CommotionCore():
             print subprocess.check_call(['/usr/bin/nmcli', 'nm', 'sleep', 'true'])
         print subprocess.check_call(['/usr/bin/pkill', '-9', 'wpa_supplicant'])
         print subprocess.check_call(['/sbin/ifconfig', interface, 'down'])
+        time.sleep(2)
         ##Check for existance of replacement binary
         self._log('Starting replacement wpa_supplicant with profile ' + profileid + ', interface ' + interface + ', and ip address ' + ip + '.')
         subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + os.path.join(self.profiledir, profileid + '.wpasupplicant')])
@@ -162,21 +163,3 @@ class CommotionCore():
         time.sleep(2)
         print subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
 
-#TODO
-#    def write_wpasupplicant_config(self, profile):
-#    def check_chipset
-
-#    def startCommotion
-#    def stopCommotion
-#    Wrappers for standard connect and fallback, and disconnection routine (which should not be in nm-dispatcher, after all)
-#    Can be the basis of any easy-to-use command line engine
-
-#    Couch all subprocess commands in the sort of structure shown for startOlsrd, to allow for proper output
-#    Finish replacing all static mentions of '/etc/nm... with a variable
-#    Restructure files so that everything is inside of "commotion" directories (in etc, pyshared, share, etc.)
-
-#    Remove pyjavaproperties
-#    Add commotionwireless.net wpasupplicant file to package
-#    Decompose fallback routine itself, such that it doesn't even need to be installed by default?
-# Driver check
-#TODO: Ifconfig may need to be brought down/up to allow olsrd to work correctly.  Should be brought down anyway
