@@ -1,4 +1,3 @@
 commotionc.py    usr/share/pyshared/
 fallback.py      usr/share/pyshared/
-commotion_wpa_supplicant usr/bin/
 commotionwireless.net.wpasupplicant etc/commotion
