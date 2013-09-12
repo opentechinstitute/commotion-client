@@ -15,7 +15,8 @@ Depends: ${shlibs:Depends},
          olsrd-plugins,
          python-pyjavaproperties 
 Recommends: nm-dispatcher-olsrd, 
-            commotion-mesh-applet 
+            commotion-mesh-applet, 
+            commotion-wpasupplicant
 Description: Implements core Commotion (mesh networking with olsrd, serval, etc.) functionality as a python module
  Provides fundamental Commotion routines for use by a variety of front-end utilities.  Also provides a custom-compiled
  version of wpa_supplicant for use on older systems whose stock wpa_supplicant binaries were compiled without support
