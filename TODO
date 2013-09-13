@@ -17,3 +17,4 @@
 #    Driver check
 #    Allow specification/choice of interface, in cases where there is more than one option
 #    Replace ifconfig call with ip call?
+#    See if wpa_cli and wpa_gui can be made to work with version 2.0

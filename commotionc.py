@@ -17,7 +17,7 @@ class CommotionCore():
 
     def __init__(self, f=None):
         self.olsrdconf = '/etc/olsrd/olsrd.conf'
-        self.profiledir = '/etc/commotion/profiles.d'
+        self.profiledir = '/etc/commotion/profiles.d/'
         if f:
             self.f = open(f, 'ab')
         else:
@@ -96,21 +96,22 @@ class CommotionCore():
 
 
     def updateProfile(self, profname, params):
-        if not os.access(f, os.W_OK):
-            self._log('Unable to write to ' + f + ', so \"' + profname + '\" was not updated')
+        fn = os.path.join(self.profiledir, profname + '.profile')
+        if not os.access(fn, os.W_OK):
+            self._log('Unable to write to ' + fn + ', so \"' + profname + '\" was not updated')
             return
         savedsettings = []
-        pf = open(os.path.join(self.profiledir, profname + '.profile'), 'r')
-        for line in pf:
+        fd = open(fn, 'r')
+        for line in fd:
             savedsettings.append(line)
             for param, value in params.iteritems():
                 if re.search('^' + param + '=', savedsettings[-1]):
                     savedsettings[-1] = (param + '=' + value + '\n')
                     break
-        pf.close()
-        pf = open(os.path.join(self.profiledir, profname + '.profile'), 'w')
+        fd.close()
+        fd = open(fn, 'w')
         for line in savedsettings:
-            pf.write(line)
+            fd.write(line)
 
 
     def startOlsrd(self, interface, conf):

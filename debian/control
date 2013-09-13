@@ -6,7 +6,7 @@ Priority: extra
 Build-Depends: python-all (>= 2.6.6-3~)
 
 Package: commotion-linux-py
-Architecture: amd64
+Architecture: all
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          python,
