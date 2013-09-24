@@ -6,15 +6,20 @@
 #    def stopCommotion
 #    Wrappers for standard connect and fallback, and disconnection routine (which should not be in nm-dispatcher, after all)
 #    Can be the basis of any easy-to-use command line engine
-
 #    Couch all subprocess commands in the sort of structure shown for startOlsrd, to allow for proper output
-#    Finish replacing all static mentions of '/etc/nm... with a variable
-#    Restructure files so that everything is inside of "commotion" directories (in etc, pyshared, share, etc.)
-
 #    Remove pyjavaproperties
-#    Add autogeneration routine for .wpasupplicant files, or at least a check
+#    Add full up/down logic to fallback script, such that it can be called by the mesh applet's disconnect function, and not result in the generation of multiple password prompts
 #    Decompose fallback routine itself, such that it doesn't even need to be installed by default?
 #    Driver check
 #    Allow specification/choice of interface, in cases where there is more than one option
 #    Replace ifconfig call with ip call?
 #    See if wpa_cli and wpa_gui can be made to work with version 2.0
+#    Port applet display logic to fallback routine
+#    Add DNS acquisition logic
+
+"Done"
+
+#    Restructure files so that everything is inside of "commotion" directories (in etc, pyshared, share, etc.)
+#    Makes sure that all file writes are unbuffered (buffer=0 paramater)
+#    Add autogeneration routine for .wpasupplicant files, or at least a check
+#    Finish replacing all static mentions of '/etc/nm... with a variable

@@ -19,13 +19,12 @@ class CommotionCore():
         self.olsrdconf = '/etc/olsrd/olsrd.conf'
         self.profiledir = '/etc/commotion/profiles.d/'
         if f:
-            self.f = open(f, 'ab')
+            self.f = open(f, 'ab', 0)
         else:
             self.f = open('/tmp/commotion-core.log', 'ab')
 
     def _log(self, msg):
         self.f.write(msg + '\n')
-        self.f.flush()
 
     def _ip_string2int(self, s):
         "Convert dotted IPv4 address to integer."
@@ -112,6 +111,7 @@ class CommotionCore():
         fd = open(fn, 'w')
         for line in savedsettings:
             fd.write(line)
+        fd.close()
 
 
     def startOlsrd(self, interface, conf):
@@ -142,6 +142,22 @@ class CommotionCore():
             self._log('stderr: ' + err)
 
 
+    def _create_wpasupplicant_conf(profile, tmpfd):
+        contents = []
+        contents.append('ap_scan=2\n')
+        contents.append('network={\n')
+        contents.append('\tmode=1\n')
+        contents.append('\tssid' + '=' + '\"' + profile['ssid'] + '\"\n')
+        contents.append('\tbssid' + '=' + profile['bssid'] + '\n')
+        contents.append('\tfrequency' + '=' + str((int(profile['channel']))*5 + 2407) + '\n')
+        if 'psk' in profile:
+            contents.append('\tkey_mgmt=WPA-PSK' + '\n')
+            contents.append('\tpsk' + '=' + '\"' + profile['psk'] + '\"\n')
+        contents.append('}')
+        for line in contents:
+            tmpfd.write(line)
+        return tmpfd.name
+ 
     def fallbackConnect(self, profileid):
         if not os.path.exists(os.path.join(self.profiledir, profileid + '.wpasupplicant')):
             self._log('No wpasupplicant config file available! Stopping...')
@@ -158,8 +174,10 @@ class CommotionCore():
         time.sleep(2)
         ##Check for existance of replacement binary
         self._log('Starting replacement wpa_supplicant with profile ' + profileid + ', interface ' + interface + ', and ip address ' + ip + '.')
-        subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + os.path.join(self.profiledir, profileid + '.wpasupplicant')])
+        tmpfd = tempfile.NamedTempFile('w+b', 0)
+        subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + _create_wpasupplicant_conf(profile, tmpfd))])
         time.sleep(2)
+        tmpfd.close()
         self.startOlsrd(interface, profile['conf'])
         time.sleep(2)
         print subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
