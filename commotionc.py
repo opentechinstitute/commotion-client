@@ -11,6 +11,7 @@ import re
 import socket
 import struct
 import subprocess
+import tempfile
 import time
 
 class CommotionCore():
@@ -142,7 +143,7 @@ class CommotionCore():
             self._log('stderr: ' + err)
 
 
-    def _create_wpasupplicant_conf(profile, tmpfd):
+    def _create_wpasupplicant_conf(self, profile, tmpfd):
         contents = []
         contents.append('ap_scan=2\n')
         contents.append('network={\n')
@@ -156,12 +157,8 @@ class CommotionCore():
         contents.append('}')
         for line in contents:
             tmpfd.write(line)
-        return tmpfd.name
  
     def fallbackConnect(self, profileid):
-        if not os.path.exists(os.path.join(self.profiledir, profileid + '.wpasupplicant')):
-            self._log('No wpasupplicant config file available! Stopping...')
-            return 1 ##And/or raise error
         profile = self.readProfile(profileid)
         interface = subprocess.check_output(['iw', 'dev']).split()
         interface = interface[interface.index('Interface') + 1]
@@ -174,8 +171,9 @@ class CommotionCore():
         time.sleep(2)
         ##Check for existance of replacement binary
         self._log('Starting replacement wpa_supplicant with profile ' + profileid + ', interface ' + interface + ', and ip address ' + ip + '.')
-        tmpfd = tempfile.NamedTempFile('w+b', 0)
-        subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + _create_wpasupplicant_conf(profile, tmpfd))])
+        wpasupplicantconf = tempfile.NamedTemporaryFile('w+b', 0)
+        self._create_wpasupplicant_conf(profile, wpasupplicantconf)
+        subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + wpasupplicantconf.name])
         time.sleep(2)
         tmpfd.close()
         self.startOlsrd(interface, profile['conf'])
