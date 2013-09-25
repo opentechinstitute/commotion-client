@@ -1,9 +1,0 @@
-ap_scan=2
-network={
- ssid="commotionwireless.net"
- bssid=02:CA:FF:EE:BA:BE
- frequency=2422
- key_mgmt=WPA-PSK
- psk="commotionwireless"
- mode=1
-}
