@@ -71,7 +71,7 @@ class CommotionCore():
             bssid = hashlib.new('md4', ssid).hexdigest()[-8:].upper() + '%02X' %int(profile['channel']) #or 'md5', [:8]
             profile['bssid'] = ':'.join(a+b for a,b in zip(bssid[::2], bssid[1::2]))
 
-        conf = re.sub('(.*)\.profile', r'\1.conf', f)
+        conf = re.sub('(.*)\.profile', r'\1.conf', f) #TODO: this is now wrong
         if os.path.exists(conf):
             self._log('profile has custom olsrd.conf: "' + conf + '"')
             profile['conf'] = conf
@@ -164,7 +164,7 @@ class CommotionCore():
         interface = interface[interface.index('Interface') + 1]
         ip = profile['ip']
         self._log('Putting network manager to sleep:')
-        if 'connected' in subprocess.check_output(['nmcli', 'nm', 'status']): #Connected in this case means "active," not just "connected to a network"
+        if 'connected' in subprocess.check_output(['nmcli', 'nm', 'status']): #Connected in this context means "active," not just "connected to a network"
             print subprocess.check_call(['/usr/bin/nmcli', 'nm', 'sleep', 'true'])
         print subprocess.check_call(['/usr/bin/pkill', '-9', 'wpa_supplicant'])
         print subprocess.check_call(['/sbin/ifconfig', interface, 'down'])
@@ -175,7 +175,7 @@ class CommotionCore():
         self._create_wpasupplicant_conf(profile, wpasupplicantconf)
         subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + wpasupplicantconf.name])
         time.sleep(2)
-        tmpfd.close()
+        wpasupplicantconf.close()
         self.startOlsrd(interface, profile['conf'])
         time.sleep(2)
         print subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
