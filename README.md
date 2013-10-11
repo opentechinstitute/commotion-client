@@ -1,5 +1,4 @@
-#Commotion Linux - Python Implementation
-=======================================
+##Commotion Linux - Python Implementation
 
 ##INTRODUCTION
 This is an initial implementation of core Commotion functionality in the form of a python module, commotionc, and related scripts.  None of the code in this bundle is intended to be called directly, but rather serves as a backend for commotion-mesh-applet and nm-applet-olsrd (although if you really want to you can use fallback.py as a basic command-line interface to bring Commotion up and down). Future versions of this code will allow for full command-line control of the Commotion software stack via one unified binary.  
@@ -34,8 +33,8 @@ psk=meshpassword
 
 ###Step 2
 Once you have either modified the default profile or installed a new one, you will need to force the various Commotion helper applets to reparse the profiles.d directory, like so:
-* _commotion-mesh-applet:_ Restart commotion-mesh-applet either by logging out of your current user session and logging in again, or exiting the applet and then running it directly from the command line: `/usr/bin/gnome-applets/commotion-mesh-applet`.
-* _nm-dispatcher-olsrd:_ Have network manager connect or disconnect to a network - but *NOT* the mesh network you're trying to connect to.  This will force the dispatcher script to run, which will pull the updates to the `profiles.d` directory into the appropriate connection files in `/etc/NetworkManager/system-connections/`. You can can confirm that the new Commotion settings have been accepted by looking at the appropriate network profile in the nm-applet interface, and/or the contents of `/etc/NetworkManager/system-connections/<connectionname>`
+* **commotion-mesh-applet:** Restart commotion-mesh-applet either by logging out of your current user session and logging in again, or exiting the applet and then running it directly from the command line: `/usr/bin/gnome-applets/commotion-mesh-applet`.
+* **nm-dispatcher-olsrd:** Have network manager connect or disconnect to a network - but *NOT* the mesh network you're trying to connect to.  This will force the dispatcher script to run, which will pull the updates to the `profiles.d` directory into the appropriate connection files in `/etc/NetworkManager/system-connections/`. You can can confirm that the new Commotion settings have been accepted by looking at the appropriate network profile in the nm-applet interface, and/or the contents of `/etc/NetworkManager/system-connections/<connectionname>`
 
 ###Step 3
 Click on the mesh profile you wish to connect to in the list of networks shown by commotion-mesh-applet.  If your system is capable of using the "network manager" connection path, Network Manager will activate the specified connection, and nm-applet will display an ad-hoc icon once you are connected.  If your system relies on the "fallback" connection path, Network Manager will be put to sleep when the mesh network is activated, and will remain so until the mesh connection is deactivated.  In the fallback case, all networking mechanics are handled directly by wpasupplicant and calls to ifconfig.  
@@ -43,7 +42,7 @@ Click on the mesh profile you wish to connect to in the list of networks shown b
 ###Step 4
 When you wish to restore normal networking functionality, click <Disconnect> in commotion-mesh-applet.  
 
-##*TROUBLESHOOTING NOTES*
+##TROUBLESHOOTING NOTES
 * Log files for each Commotion component are generated in `/tmp`, with very obvious names (eg, `nm-dispatcher-olsrd.log`).  
 * A great deal of information is dumped to standard out by commotion-mesh-applet, so if you're having trouble connecting you should close the applet and restart it from a command line, so that you can see its output. 
 * If you are using the "network manager" connection path, you might want to keep *wpa_cli* open while you're trying to connect.  This will allow you to see whether or not the Linux client is able to successfully complete the authentication handshake with the rest of the network 
