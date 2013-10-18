@@ -1,2 +1,7 @@
 #!/bin/bash
 pip install pyjavaproperties
+IBSS_RSN="`/sbin/wpa_cli ibss_rsn 00:00:00:00:00`"
+if [[ "$IBSS_RSN" == *UNKNOWN* ]]; then
+ echo "\nWARNING: The version of wpasupplicant installed on your system does not support encrypted mesh connections.  If you intend to participate in encrypted mesh networks, you will need to install commotion-wpasupplicant, or manually recompile a newer version of wpasupplicant (1.0+) with the IBSS_RSN=y flag set. \nPress any key to continue..."
+read -n 1 -s
+fi

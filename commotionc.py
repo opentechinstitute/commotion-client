@@ -21,9 +21,9 @@ class CommotionCore():
         self.olsrdconf = '/etc/olsrd/olsrd.conf'
         self.profiledir = '/etc/commotion/profiles.d/'
         if src:
-            self.syslog = syslog.openlog(src)
+            self.logname = src
         else:
-            self.syslog = syslog.openlog()
+            self.logname = 'commotionc'
 
     def _ip_string2int(self, s):
         "Convert dotted IPv4 address to integer."
@@ -39,18 +39,15 @@ class CommotionCore():
         "Convert 32-bit integer to dotted IPv4 address."
         return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
 
-    def _get_net_size(self, netmask):
-        # after bin(), remove the 0b prefix, strip the 0s and count the 1s
-        binary_str = bin(self._ip_string2int(netmask))[2:]
-        return str(len(binary_str.rstrip('0')))
-
     def _generate_ip(self, ip, netmask):
         ipint = self._ip_string2int(ip)
         netmaskint = self._ip_string2int(netmask)
         return self._ip_int2string((random.randint(1, 2147483648) & ~netmaskint) + ipint)
 
     def log(self, msg):
-        self.syslog.syslog(msg)
+        syslog.openlog(self.logname)
+        syslog.syslog(msg)
+        syslog.closelog()
 
     def readProfile(self, profname):
         f = os.path.join(self.profiledir, profname + '.profile')
@@ -174,7 +171,7 @@ class CommotionCore():
                 self.log('Error putting network manager to sleep!')
         self.log('Killing default version of wpa_supplicant...')
         try:
-            subprocess.check_call(['/usr/bin/pkill', '-9', 'wpa_supplicant']):
+            subprocess.check_call(['/usr/bin/pkill', '-9', 'wpa_supplicant'])
         except:
             self.log('Error killing wpa_supplicant!')
             
@@ -190,9 +187,10 @@ class CommotionCore():
         subprocess.Popen(['/usr/bin/commotion_wpa_supplicant', '-Dnl80211', '-i' + interface, '-c' + wpasupplicantconf.name])
         time.sleep(2)
         wpasupplicantconf.close()
-        if subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0']):
-            self.log('')
+        try:
+            subprocess.check_call(['/sbin/ifconfig', interface, 'up', ip, 'netmask', '255.0.0.0'])
+        except:
+            self.log('Error bringing interface up!')
                
         self.startOlsrd(interface, profile['conf'])
-        time.sleep(2)
 
