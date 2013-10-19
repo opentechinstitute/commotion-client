@@ -17,13 +17,10 @@ import time
 
 class CommotionCore():
 
-    def __init__(self, src=None):
+    def __init__(self, src='commotionc'):
         self.olsrdconf = '/etc/olsrd/olsrd.conf'
         self.profiledir = '/etc/commotion/profiles.d/'
-        if src:
-            self.logname = src
-        else:
-            self.logname = 'commotionc'
+        self.logname = src
 
     def _ip_string2int(self, s):
         "Convert dotted IPv4 address to integer."
@@ -39,16 +36,28 @@ class CommotionCore():
         "Convert 32-bit integer to dotted IPv4 address."
         return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
 
-    def _generate_ip(self, ip, netmask):
+    def _generate_ip(self, ip, netmask, interface):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        hwiddata = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('32s', interface[:15]))
+        hwip = self._ip_string2int(socket.inet_ntoa(hwiddata[20:24]))
         ipint = self._ip_string2int(ip)
         netmaskint = self._ip_string2int(netmask)
-        return self._ip_int2string((random.randint(1, 2147483648) & ~netmaskint) + ipint)
+        return self._ip_int2string((hwip & ~netmaskint) + ipint)
 
     def log(self, msg):
         syslog.openlog(self.logname)
         syslog.syslog(msg)
         syslog.closelog()
 
+    def selectInterface(self, preferred=None):
+        interface = subprocess.check_output(['iw', 'dev']).split()
+        interface = interface[interface.index('Interface') + 1]
+        driver = os.listdir(os.path.join('/sys/class/net', interface, 'device/driver/module/drivers'))
+        if not driver[0].split(':')[1] in ('ath5k', 'ath6kl', 'ath9k', 'ath9k_htc', 'b43', 'b43legacy', 'carl9170', 'iwlegacy', 'iwlwifi', 'mac80211_hwsim', 'orinoco', 'p54pci', 'p54spi', 'p54usb', 'rndis_wlan', 'rt61pci', 'rt73usb', 'rt2400pci', 'rt2500pci', 'rt2500usb', 'rt2800usb', 'rtl8187', 'wl1251', 'wl12xx', 'zd1211rw'):
+             self.log('WARNING: Driver for the selected interface does not support cfg80211, or ibss mode, or both!'
+        subprocess.check_output(['iw', 'list'])
+        return interface
+        
     def readProfile(self, profname):
         f = os.path.join(self.profiledir, profname + '.profile')
         p = pyjavaproperties.Properties()
@@ -63,7 +72,7 @@ class CommotionCore():
                 self.log('Error in ' + f + ': missing or malformed ' + param + ' option') ## And raise some sort of error?
         if profile['ipgenerate'] in ('True', 'true', 'Yes', 'yes', '1'): # and not profile['randomip']
             self.log('Randomly generating static ip with base ' + profile['ip'] + ' and subnet ' + profile['netmask'])
-            profile['ip'] = self._generate_ip(profile['ip'], profile['netmask'])
+            profile['ip'] = self._generate_ip(profile['ip'], profile['netmask'], self.selectInterface())
             self.updateProfile(profname, {'ipgenerate': 'false', 'ip': profile['ip']})
         if not 'bssid' in profile: #Include note in default config file that bssid parameter is allowed, but should almost never be used
             self.log('Generating BSSID from hash of ssid and channel')
@@ -160,8 +169,7 @@ class CommotionCore():
  
     def fallbackConnect(self, profileid):
         profile = self.readProfile(profileid)
-        interface = subprocess.check_output(['iw', 'dev']).split()
-        interface = interface[interface.index('Interface') + 1]
+        interface = self.selectInterface()
         ip = profile['ip']
         if 'connected' in subprocess.check_output(['nmcli', 'nm', 'status']): #Connected in this context means "active," not just "connected to a network"
             self.log('Putting network manager to sleep...')
