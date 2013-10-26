@@ -1,6 +1,7 @@
 #/usr/bin/python
 
 import dbus.mainloop.glib ; dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+import fcntl
 import glob
 import hashlib
 import os
@@ -22,27 +23,17 @@ class CommotionCore():
         self.profiledir = '/etc/commotion/profiles.d/'
         self.logname = src
 
-    def _ip_string2int(self, s):
-        "Convert dotted IPv4 address to integer."
-        # first validate the IP
-        try:
-            socket.inet_aton(s)
-        except socket.error:
-            self.log('"' + s + '" is not a valid IP address!')
-            return
-        return reduce(lambda a,b: a<<8 | b, map(int, s.split(".")))
-
-    def _ip_int2string(self, ip):
-        "Convert 32-bit integer to dotted IPv4 address."
-        return ".".join(map(lambda n: str(ip>>n & 0xFF), [24,16,8,0]))
 
     def _generate_ip(self, ip, netmask, interface):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        hwiddata = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('32s', interface[:15]))
-        hwip = self._ip_string2int(socket.inet_ntoa(hwiddata[20:24]))
-        ipint = self._ip_string2int(ip)
-        netmaskint = self._ip_string2int(netmask)
-        return self._ip_int2string((hwip & ~netmaskint) + ipint)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #First two lines adapted from stackoverflow.com/questions/159137/getting-mac-address
+        hwiddata = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('32s', interface[:15])) 
+        netmaskaddr = socket.inet_aton(netmask)
+        baseaddr = socket.inet_aton(ip)
+        hwaddr = hwiddata[20:24] #Extract only the last four 1-byte hex values of the returned mac address
+        finaladdr = []
+        for i in range (4):
+             finaladdr.append((ord(hwaddr[i]) & ~ord(netmaskaddr[i])) | (ord(baseaddr[i]) & ord(netmaskaddr[i])))
+        return socket.inet_ntoa(''.join([chr(item) for item in finaladdr]))
 
     def log(self, msg):
         syslog.openlog(self.logname)
@@ -50,12 +41,12 @@ class CommotionCore():
         syslog.closelog()
 
     def selectInterface(self, preferred=None):
-        interface = subprocess.check_output(['iw', 'dev']).split()
+        interface = subprocess.check_output(['/sbin/iw', 'dev']).split()
         interface = interface[interface.index('Interface') + 1]
         driver = os.listdir(os.path.join('/sys/class/net', interface, 'device/driver/module/drivers'))
         if not driver[0].split(':')[1] in ('ath5k', 'ath6kl', 'ath9k', 'ath9k_htc', 'b43', 'b43legacy', 'carl9170', 'iwlegacy', 'iwlwifi', 'mac80211_hwsim', 'orinoco', 'p54pci', 'p54spi', 'p54usb', 'rndis_wlan', 'rt61pci', 'rt73usb', 'rt2400pci', 'rt2500pci', 'rt2500usb', 'rt2800usb', 'rtl8187', 'wl1251', 'wl12xx', 'zd1211rw'):
-             self.log('WARNING: Driver for the selected interface does not support cfg80211, or ibss mode, or both!'
-        subprocess.check_output(['iw', 'list'])
+             self.log('WARNING: Driver for the selected interface does not support cfg80211, or ibss mode, or both!')
+        #subprocess.check_output(['iw', 'list'])
         return interface
         
     def readProfile(self, profname):
@@ -79,7 +70,7 @@ class CommotionCore():
             bssid = hashlib.new('md4', ssid).hexdigest()[-8:].upper() + '%02X' %int(profile['channel']) #or 'md5', [:8]
             profile['bssid'] = ':'.join(a+b for a,b in zip(bssid[::2], bssid[1::2]))
 
-        conf = re.sub('(.*)\.profile', r'\1.conf', f) #TODO: this is now wrong
+        conf = os.path.join(re.sub('(.*)\profiles.d.*', r'\1olsrd.d', self.profiledir), profname + '.conf') #Unify this syntax by making profiledir just /etc/commotion?
         if os.path.exists(conf):
             self.log('profile has custom olsrd.conf: "' + conf + '"')
             profile['conf'] = conf

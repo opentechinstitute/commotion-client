@@ -18,7 +18,12 @@
 #    Check and refine generate_ip, selectInterface, and GTK profile editor  
 #    Thread driver checks through both submodules: force the applet to use the best option, and tell nm-dispatcher to give up if it's using a bad interface (can you get it to switch, perhaps?!?
 #    Replace subprocess calls with os.lchmod, os.kill
-
+#    Remove/overhaul debug log call; get mesh status buttons to appear conditionally
+#    NO RELATIVE PATHS IN SUBPROCESS CALLS
+#    Should name of profile displayed by mesh applet be name of the file, or name of the SSID specified in the file?  
+#    Replace all gksu calls with gksudo
+#    Refine ip generation logic, such that you'll never end up with a .0
+#    Make inactive menu items grey, not invisible
 "Done"
 
 #    Restructure files so that everything is inside of "commotion" directories (in etc, pyshared, share, etc.)
