@@ -14,16 +14,17 @@
 #    See if wpa_cli and wpa_gui can be made to work with version 2.0
 #    Port applet display logic to fallback routine
 #    Add DNS acquisition logic
-#    Dependencies: iw, vi, pkill, gksu
+#    Add Dependencies: iw, vi, pkill, gksu
 #    Check and refine generate_ip, selectInterface, and GTK profile editor  
 #    Thread driver checks through both submodules: force the applet to use the best option, and tell nm-dispatcher to give up if it's using a bad interface (can you get it to switch, perhaps?!?
 #    Replace subprocess calls with os.lchmod, os.kill
-#    Remove/overhaul debug log call; get mesh status buttons to appear conditionally
 #    NO RELATIVE PATHS IN SUBPROCESS CALLS
 #    Should name of profile displayed by mesh applet be name of the file, or name of the SSID specified in the file?  
 #    Replace all gksu calls with gksudo
 #    Refine ip generation logic, such that you'll never end up with a .0
-#    Make inactive menu items grey, not invisible
+#    Refine wpa_supplicant version check for debian; add to nm-dispatcher-olsrd
+#    Add driver check override to nm-dispatcher-olsrd
+
 "Done"
 
 #    Restructure files so that everything is inside of "commotion" directories (in etc, pyshared, share, etc.)
@@ -36,3 +37,6 @@
 #    Driver check
 #    Change install of pyjavaproperties to be done through pipy repo, post install hook
 #    Add full up/down logic to fallback script, such that it can be called by the mesh applet's disconnect function, and not result in the generation of multiple password prompts
+#    Make inactive menu items grey, not invisible
+#    Remove/overhaul debug log call
+#    Get mesh status buttons to appear conditionally
