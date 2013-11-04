@@ -24,11 +24,11 @@ class CommotionCore():
         self.logname = src
 
 
-    def _generate_ip(self, ip, netmask, interface):
+    def _generate_ip(self, base, netmask, interface):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #First two lines adapted from stackoverflow.com/questions/159137/getting-mac-address
         hwiddata = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('32s', interface[:15])) 
         netmaskaddr = socket.inet_aton(netmask)
-        baseaddr = socket.inet_aton(ip)
+        baseaddr = socket.inet_aton(base)
         hwaddr = hwiddata[20:24] #Extract only the last four 1-byte hex values of the returned mac address
         finaladdr = []
         for i in range (4):
