@@ -24,6 +24,7 @@
 #    Refine ip generation logic, such that you'll never end up with a .0
 #    Refine wpa_supplicant version check for debian; add to nm-dispatcher-olsrd
 #    Add driver check override to nm-dispatcher-olsrd
+#    Combine the interface selection logic from nm-dispatcher??? and mesh-applet into commotion-linux; have both call commotion-linux
 
 "Done"
 

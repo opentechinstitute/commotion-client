@@ -13,7 +13,6 @@ Depends: ${shlibs:Depends},
          python-support,
          olsrd, 
          olsrd-plugins,
-         gksu,
          python-pyjavaproperties | python-pip
 Recommends: nm-dispatcher-olsrd, 
             commotion-mesh-applet, 
