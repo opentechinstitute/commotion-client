@@ -162,7 +162,7 @@ class CommotionCore():
         profile = self.readProfile(profileid)
         interface = self.selectInterface()
         ip = profile['ip']
-        if 'connected' in subprocess.check_output(['nmcli', 'nm', 'status']): #Connected in this context means "active," not just "connected to a network"
+        if 'connected' in subprocess.check_output(['/usr/bin/nmcli', 'nm', 'status']): #Connected in this context means "active," not just "connected to a network"
             self.log('Putting network manager to sleep...')
             try:
                 subprocess.check_call(['/usr/bin/nmcli', 'nm', 'sleep', 'true'])
