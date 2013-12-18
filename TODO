@@ -1,5 +1,4 @@
 #TODO
-#    def write_wpasupplicant_config(self, profile):
 #    def check_chipset
 
 #    def startCommotion
@@ -8,25 +7,29 @@
 #    Can be the basis of any easy-to-use command line engine
 #    Couch all subprocess commands in the sort of structure shown for startOlsrd, to allow for proper output
 #    Decompose fallback routine itself, such that it doesn't even need to be installed by default?
-#    Add logic to intelligently chose the best of multiple interfaces, fall back to other if that doesn't work
 #    Replace ifconfig call with ip call?
 #    See if wpa_cli and wpa_gui can be made to work with version 2.0
 #    Add DNS acquisition logic
-#    Add Dependencies: iw, vi, pkill, gksu
 #    Check and refine generate_ip, selectInterface, and GTK profile editor  
 #    Replace subprocess calls with os.lchmod, os.kill
 #    Should name of profile displayed by mesh applet be name of the file, or name of the SSID specified in the file?  
-#    Replace all gksu calls with gksudo
 #    Refine ip generation logic, such that you'll never end up with a .0
 #    Refine wpa_supplicant version check for debian; add to nm-dispatcher-olsrd
 #    Allow specification/choice of interface, in cases where there is more than one option
-#    Combine the interface selection logic from nm-dispatcher??? and mesh-applet into commotion-linux; have both call commotion-linux
+#    Have getInterface return compatibility flags?
 #    Thread driver checks through both submodules: force the applet to use the best option, and tell nm-dispatcher to give up if it's using a bad interface (can you get it to switch, perhaps?!?
-#    Show Disconnect command even when mesh isn't completely successful.  
 #    Debug Gtk error messages that should show up when mesh isn't connected (dialog box and menu bar)
+#    Escalate some logging messages to visual notifications
+#    Add input validation to readProfile
 
 "Done"
 
+#    Add Dependencies: iw, vi, pkill, gksu
+#    def write_wpasupplicant_config(self, profile):
+#    Add logic to intelligently chose the best of multiple interfaces, fall back to other if that doesn't work
+#    Show Disconnect command even when mesh isn't completely successful.  
+#    Combine the interface selection logic from nm-dispatcher??? and mesh-applet into commotion-linux; have both call commotion-linux
+#    Replace all gksu calls with gksudo
 #    Restructure files so that everything is inside of "commotion" directories (in etc, pyshared, share, etc.)
 #    Makes sure that all file writes are unbuffered (buffer=0 paramater)
 #    Add autogeneration routine for .wpasupplicant files, or at least a check

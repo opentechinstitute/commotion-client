@@ -98,7 +98,6 @@ class CommotionCore():
     def readProfiles(self):
         '''get all the available mesh profiles and return as a dict'''
         profiles = dict()
-        self.log('\n----------------------------------------')
         self.log('Reading profiles:')
         for f in glob.glob(self.profiledir + '*.profile'):
             profname = os.path.split(re.sub('\.profile$', '', f))[1]
