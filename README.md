@@ -1,12 +1,26 @@
 ##Commotion Linux - Python Implementation
 
 ##INTRODUCTION
-This is an initial implementation of core Commotion functionality in the form of a python module, commotionc, and related scripts.  None of the code in this bundle is intended to be called directly, but rather serves as a backend for commotion-mesh-applet and nm-applet-olsrd (although if you really want to you can use fallback.py as a basic command-line interface to bring Commotion up and down). Future versions of this code will allow for full command-line control of the Commotion software stack via one unified binary.  
+This is an initial implementation of core Commotion functionality in the form of a python module (commotionc) and related scripts.  None of the code in this bundle is intended to be called directly, but rather serves as a backend for commotion-mesh-applet and nm-applet-olsrd (although if you really want to you can use fallback.py as a basic command-line interface to bring Commotion up and down). Future versions of this code will allow for full command-line control of the Commotion software stack via one unified binary.  
 
 ##PRE-REQUISITES
 1. Confirm that you have a wireless adapter whose driver supports both the cfg80211 kernel interface and ibss mode. A list of drivers that support these features can be found at http://wireless.kernel.org/en/users/Drivers. 
 2. Ensure that you are running an up-to-date OS and kernel.  Where possible, download and install the newest kernel your OS supports (optimally 3.5 or higher).  Many wireless drivers are embedded in the kernel, and some of these have only recently gotten full cfg80211 support.  
-3. If you are running an OS that uses a version of wpasupplicant older than v. 1.0, you will need the commotion-wpasupplicant package.  Your system will only be able connect in "fallback" mode, which entirely bypasses network manager.  
+3. If you are running an OS that uses a version of wpasupplicant older than v. 1.0, you will either need to recompile wpasupplicant for your platform with support for IBSS\_RSN, or install the commotion-wpasupplicant package.  If you opt to use commotion-wpasupplicant, your system will only be able connect in "fallback" mode, which entirely bypasses network manager.  
+
+##INSTALLATION
+----------
+If you are using Debian, Ubuntu, Mint, or any other Debian-derivative, you can
+install Commotion by downloading all .deb packages located at
+https://downloads.commotionwireless.net/linux, and installing them with:
+
+sudo dpkg -i \*.deb
+
+If you encounter any dependency errors during this process, simply run:
+
+apt-get install -f
+
+to resolve the problems, and then run the original dpkg command once again.
 
 ##USAGE
 ###Step 1
@@ -20,9 +34,9 @@ bssid=02:CA:FF:EE:BA:BE
 channel=5
 #2.4 GHz Channel (REQUIRED)
 ip=5.0.0.0
-#When ipgenerate=true, ip holds the subnet from which the actual ip will be generated.  When ipgenerate=false, ip holds the actual ip that will be used for the connection (REQUIRED)
+#When ipgenerate=true, ip holds the base address from which the actual ip will be generated.  When ipgenerate=false, ip holds the actual ip that will be used for the connection (REQUIRED)
 ipgenerate=true
-#See not for ip parameter.  ipgenerate is automatically set to false once a permanent ip has been generated (REQUIRED)
+#See note for ip parameter.  ipgenerate is automatically set to false once a permanent ip has been generated (REQUIRED)
 netmask=255.0.0.0
 #The subnet mask of the network (REQUIRED)
 dns=8.8.8.8
@@ -43,11 +57,35 @@ Click on the mesh profile you wish to connect to in the list of networks shown b
 When you wish to restore normal networking functionality, click <Disconnect> in commotion-mesh-applet.  
 
 ##TROUBLESHOOTING NOTES
-* Log files for each Commotion component are generated in `/tmp`, with very obvious names (eg, `nm-dispatcher-olsrd.log`).  
-* A great deal of information is dumped to standard out by commotion-mesh-applet, so if you're having trouble connecting you should close the applet and restart it from a command line, so that you can see its output. 
-* If you are using the "network manager" connection path, you might want to keep *wpa_cli* open while you're trying to connect.  This will allow you to see whether or not the Linux client is able to successfully complete the authentication handshake with the rest of the network 
+* Logging for all commotion modules is handled by syslog, with each message prefixed by the module that generated it (ie, `nm-dispatcher-olsrd.log`).  
+* Hence, a useful command to run while trying to connect to a mesh might be: *tail -f `/var/log/syslog` | grep -e commotion -e nm-dispatcher*
+* Some additional function failure information may be dumped to standard out by commotion-mesh-applet, so if you're having trouble connecting you should close the applet and restart it from a command line, so that you can see its output. 
+* If you are using the "network manager" connection path, you might want to launch and keep *wpa_cli* open while you're trying to connect.  This will allow you to see whether or not the Linux client is able to successfully complete the authentication handshake with the rest of the network.  
 * When connecting to encrypted mesh networks, you want to see output that says "Key negotiation completed with <MAC address>" immediately after you connect.  In the fallback case, this output should be dumped to stdout by commotion-mesh-applet.  In the "network manager" connection process, this output should be shown by *wpa_cli*.  
-* Some information may also be sent to `/var/log/syslog`.  
 * Some drivers much more likely to properly connect to a mesh after being unloaded from and then reloaded into the kernel. Weirdly, this also applies to olsrd: If everything else seems to be working, but olsrd refuses to get routes, try unloading/reloading the driver, and reconnecting.
-* If you have multiple networking cards present on your system, disable (ie, unload the drivers for) the ones that aren't capable of meshing properly.  The interface selection routines in the Linux client are currently very unintelligent, and will simply chose the first active wireless interface they encounter, even if that interface actually does not support mesh connections.  
 * iwconfig and iw both lie horribly about data such as active channel and authentication status.  Don't necessarily believe what they tell you.  
+
+##BUGS
+----
+If you encounter any problems or wish to request features, please add them to
+our issue tracker:
+
+https://github.com/opentechinstitute/nm-dispatcher-olsrd
+
+##BUILDING
+--------
+If you are on a non-Debian-derivitive GNU/Linux distro, then you'll need to
+install this manually.  We are looking for contributions of packaging to make
+this easy for people to do.
+
+Check the `debian/control` file for a list of standard libraries that are
+required.  Here are the other libraries needed:
+
+* https://github.com/opentechinstitute/commotion-linux-py
+* https://pypi.python.org/pypi/python-networkmanager
+
+This project relies heavily on the NetworkManager 0.9.x dbus API, currently
+via the python-networkmanager library available on pypi:
+
+http://people.redhat.com/dcbw/NetworkManager/NetworkManager%20DBUS%20API.txt
+http://projects.gnome.org/NetworkManager/developers/api/09/spec.html

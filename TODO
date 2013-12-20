@@ -21,8 +21,7 @@
 #    Debug Gtk error messages that should show up when mesh isn't connected (dialog box and menu bar)
 #    Escalate some logging messages to visual notifications
 #    Add input validation to readProfile
-
-"Done"
+#    Add full connection checker.  If the connection fails at any point, try various things, including rfkill, different interface, fallback.py, restarting olsrd, etc."
 
 #    Add Dependencies: iw, vi, pkill, gksu
 #    def write_wpasupplicant_config(self, profile):
