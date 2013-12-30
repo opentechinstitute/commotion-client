@@ -82,7 +82,7 @@ class CommotionCore():
             self.updateProfile(profname, {'ipgenerate': 'false', 'ip': profile['ip']})
         if not 'bssid' in profile: #Include note in default config file that bssid parameter is allowed, but should almost never be used
             self.log('Generating BSSID from hash of ssid and channel')
-            bssid = hashlib.new('md4', ssid).hexdigest()[-8:].upper() + '%02X' %int(profile['channel']) #or 'md5', [:8]
+            bssid = hashlib.new('md5', ssid).hexdigest()[:10].upper() + '%02d' %int(profile['channel'])
             profile['bssid'] = ':'.join(a+b for a,b in zip(bssid[::2], bssid[1::2]))
 
         conf = os.path.join(re.sub('(.*)\profiles.d.*', r'\1olsrd.d', self.profiledir), profname + '.conf') #Unify this syntax by making profiledir just /etc/commotion?
