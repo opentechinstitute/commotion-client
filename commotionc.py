@@ -40,14 +40,29 @@ class CommotionCore():
         syslog.syslog(msg)
         syslog.closelog()
 
-    def selectInterface(self, preferred=None):
-        interface = subprocess.check_output(['/sbin/iw', 'dev']).split()
-        interface = interface[interface.index('Interface') + 1]
-        driver = os.listdir(os.path.join('/sys/class/net', interface, 'device/driver/module/drivers'))
-        if not driver[0].split(':')[1] in ('ath5k', 'ath6kl', 'ath9k', 'ath9k_htc', 'b43', 'b43legacy', 'carl9170', 'iwlegacy', 'iwlwifi', 'mac80211_hwsim', 'orinoco', 'p54pci', 'p54spi', 'p54usb', 'rndis_wlan', 'rt61pci', 'rt73usb', 'rt2400pci', 'rt2500pci', 'rt2500usb', 'rt2800usb', 'rtl8187', 'wl1251', 'wl12xx', 'zd1211rw'):
-             self.log('WARNING: Driver for the selected interface does not support cfg80211, or ibss mode, or both!')
-        #subprocess.check_output(['iw', 'list'])
-        return interface
+    def getInterface(self, preferred=None):
+        interface = None
+        for wireless in glob.iglob('/sys/class/net/*/wireless'): #Reformat as a list comprehension
+            driver = os.listdir(os.path.join('/sys/class/net', wireless.split('/')[4], 'device/driver/module/drivers'))
+            if driver[0].split(':')[1] in ('ath5k', 'ath6kl', 'ath9k', 'ath9k_htc', 'b43', 'b43legacy', 'carl9170', 'iwlegacy', 'iwlwifi', 'mac80211_hwsim', 'orinoco', 'p54pci', 'p54spi', 'p54usb', 'rndis_wlan', 'rt61pci', 'rt73usb', 'rt2400pci', 'rt2500pci', 'rt2500usb', 'rt2800usb', 'rtl8187', 'wl1251', 'wl12xx', 'zd1211rw'):
+                 interface = wireless.split('/')[4]
+                 if preferred == interface:
+                     return preferred
+        if preferred:
+            if interface:
+                self.log("WARNING: Specified interface " + preferred + " does not support cfg80211 (ibss encryption), or ibss mode, or both!  Interface " + interface + " does, however.  Consider changing the interface setting in /etc/commotion/commotionc.conf")
+            else: 
+                self.log('WARNING: No available wireless interfaces have support for both ibss mode and cfg80211 (ibss encryption)')
+            return preferred
+        elif interface:
+            self.log("Mesh-compatible interface found! (" + interface + ")")
+            return interface
+        else: 
+            self.log('WARNING: No available wireless interfaces have support for both ibss mode and cfg80211 (ibss encryption)')
+            return wireless.split('/')[4]
+            #interface = subprocess.check_output(['/sbin/iw', 'dev']).split()
+            #interface = interface[interface.index('Interface') + 1]
+            #subprocess.check_output(['iw', 'list'])
         
     def readProfile(self, profname):
         f = os.path.join(self.profiledir, profname + '.profile')
@@ -63,11 +78,11 @@ class CommotionCore():
                 self.log('Error in ' + f + ': missing or malformed ' + param + ' option') ## And raise some sort of error?
         if profile['ipgenerate'] in ('True', 'true', 'Yes', 'yes', '1'): # and not profile['randomip']
             self.log('Randomly generating static ip with base ' + profile['ip'] + ' and subnet ' + profile['netmask'])
-            profile['ip'] = self._generate_ip(profile['ip'], profile['netmask'], self.selectInterface())
+            profile['ip'] = self._generate_ip(profile['ip'], profile['netmask'], self.getInterface())
             self.updateProfile(profname, {'ipgenerate': 'false', 'ip': profile['ip']})
         if not 'bssid' in profile: #Include note in default config file that bssid parameter is allowed, but should almost never be used
             self.log('Generating BSSID from hash of ssid and channel')
-            bssid = hashlib.new('md4', ssid).hexdigest()[-8:].upper() + '%02X' %int(profile['channel']) #or 'md5', [:8]
+            bssid = hashlib.new('md5', ssid).hexdigest()[:10].upper() + '%02d' %int(profile['channel'])
             profile['bssid'] = ':'.join(a+b for a,b in zip(bssid[::2], bssid[1::2]))
 
         conf = os.path.join(re.sub('(.*)\profiles.d.*', r'\1olsrd.d', self.profiledir), profname + '.conf') #Unify this syntax by making profiledir just /etc/commotion?
@@ -83,7 +98,6 @@ class CommotionCore():
     def readProfiles(self):
         '''get all the available mesh profiles and return as a dict'''
         profiles = dict()
-        self.log('\n----------------------------------------')
         self.log('Reading profiles:')
         for f in glob.glob(self.profiledir + '*.profile'):
             profname = os.path.split(re.sub('\.profile$', '', f))[1]
@@ -160,7 +174,7 @@ class CommotionCore():
  
     def fallbackConnect(self, profileid):
         profile = self.readProfile(profileid)
-        interface = self.selectInterface()
+        interface = self.getInterface()
         ip = profile['ip']
         if 'connected' in subprocess.check_output(['/usr/bin/nmcli', 'nm', 'status']): #Connected in this context means "active," not just "connected to a network"
             self.log('Putting network manager to sleep...')
