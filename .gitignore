@@ -6,5 +6,8 @@ debian/commotion-linux-py.prerm.debhelper
 debian/commotion-linux-py/
 # python build products
 *.pyc
+__pycache__
 # example code
 examples/
+# PyQt auto-created asset tracking file.
+commotion_client/assets/assets.py
