@@ -11,3 +11,4 @@ __pycache__
 examples/
 # PyQt auto-created asset tracking file.
 commotion_client/assets/assets.py
+commotion_client/temp/
