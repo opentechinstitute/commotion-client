@@ -1,0 +1,9 @@
+When a new asset is added to the Commotion_client project the assets.py file MUST be re-created. The file assets.py within this folder is created by doing the following.
+
+When a new asset is created it must be added to the commotion_assets.qrc xml file. If that asset requires translation make sure to add translated versions to the appropriate language resource sections. e.g if the lanaguge == french. <qresource lang="fr">.
+
+When new assets are added or old assets are changed... really any change to any assets the following command line argument MUST be run. This will re-create the assets.py file.
+
+<code>
+pyrcc4 -py3 commotion_assets.qrc -o assets.py 
+</code>
