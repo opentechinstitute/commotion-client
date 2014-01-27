@@ -13,24 +13,27 @@ import sys
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+from assets import assets
+from utils import logger
+from GUI.MainWindow import MainWindow
 
-class MainWindow(QtGui.QMainWindow):
-    """
-    The central widget for the commotion client. This widget initalizes all other sub-widgets and modules as well as defines the paramiters of the main GUI container.
-    """
+#==================================
+# Startup Starts HERE
+#==================================
 
-    def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
-        self.dirty = False #The variable to keep track of state for tracking if the gui needs any clean up.
-        
-        
+#Enable Logging
+logFile = "temp/logfile.temp" #TODO change the logfile to be grabbed from the commotion config reader
 
-
+if "--debug" in sys.argv:
+    del sys.argv[sys.argv.index("--debug")]
+    logLevel = 5
+else:
+    logLevel = 2 #getConfig() #actually want to get this from commotion_config
+log = logger.set_logging("commotion_client", logLevel, logFile)
 
 #==================================
 # Main Applicaiton Creator
 #==================================
-
 app = QtGui.QApplication(sys.argv)
 
 #Enable Translations
@@ -43,13 +46,14 @@ if qtTranslator.load("qt_"+locale, ":/"):
         app.installTranslator(appTranslator)
 
 #Set Application and Organization Information
-app.setOrganizationName("Open Technology Institute")
+app.setOrganizationName("The Open Technology Institute")
 app.setOrganizationDomain("commotionwireless.net")
 app.setApplicationName(app.translate("main", "Commotion Client")) #special translation case since we are outside of the main application
-app.setWindowIcon(QtGui.QIcon(":/assets/images/commotion_logo.png"))
+app.setWindowIcon(QtGui.QIcon(":commotion_logo.png"))
 __version__ = "1.0"
 
-#Start GUI 
+#Start GUI
 form = MainWindow()
 form.show()
 app.exec_()
+log.debug(app.translate("logs", "Shutting down"))
