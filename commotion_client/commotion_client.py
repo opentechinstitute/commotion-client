@@ -6,6 +6,14 @@ Commotion_client
 
 The main python script for implementing the commotion_client GUI.
 
+Key componenets handled within:
+ * singleApplication mode
+ * cross instance messaging
+ * creation of main GUI
+ * command line argument parsing
+ * translation
+ * initial logging settings
+
 """
 
 import sys
@@ -27,7 +35,7 @@ from GUI.MainWindow import MainWindow
 #==================================
 def main():
     """
-    The main application start up system. 
+    Function that handles command line arguments, translation, and creates the main application.
     """
     
     #Handle command line arguments
@@ -42,7 +50,7 @@ def main():
     if args.verbose:
         logLevel = args.verbose
     else:
-        logLevel = 2 #getConfig() #actually want to get this from commotion_config
+        logLevel = 2 #TODO getConfig() #actually want to get this from commotion_config
     if args.logfile:
         logFile = args.logfile
     else:
@@ -65,22 +73,7 @@ def main():
     log = logger.set_logging("commotion_client", logLevel, logFile)
 
     #Create Instance of Commotion Application
-    #check w/wo a message
-    if args.message:
-        msg = args.message
-        app = SingleApplicationWithMessaging(sys.argv, key)
-        if app.isRunning():
-            log.info("Commotion client called when already running. Checking for message.")
-            #Checking for custom message
-            app.sendMessage(msg)
-            log.info("application is already running, sent following message: \n\"{0}\"".format(msg))
-            sys.exit(1)
-    else:
-        app = SingleApplicationWithMessaging(sys.argv, key)
-        if app.isRunning():
-            log.info("application is already running. Application will be brought to foreground")
-            app.sendMessage("showMain")
-            sys.exit(1)
+    app = SingleApplicationWithMessaging(sys.argv, key)
 
     #Enable Translations
     locale = QtCore.QLocale.system().name()
@@ -90,6 +83,20 @@ def main():
         appTranslator = QtCore.QTranslator()
         if appTranslator.load("imagechanger_"+locale, ":/"):
             app.installTranslator(appTranslator)
+
+
+    #check w/wo a message
+    if app.isRunning():
+        if args.message:
+            #Checking for custom message
+            msg = args.message
+            app.sendMessage(msg)
+            log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
+        else:
+            log.info(app.translate("logs", "application is already running. Application will be brought to foreground"))
+            app.sendMessage("showMain")
+        sys.exit(1)
+
 
     #Set Application and Organization Information
     app.setOrganizationName("The Open Technology Institute")
@@ -112,12 +119,10 @@ def main():
         pass #TODO IMplement controller
         ##controller = CommotionController.CommotionController()
 
-    app.connect(app, QtCore.SIGNAL('messageAvailable'), app.processMessage)
     #Start Application
     sys.exit(app.exec_())
-    print(app.main)
     
-    #Log at shutdown on verbose
+    #Log at shutdown when verbose is specified
     log.debug(app.translate("logs", "Shutting down"))
     
 class SingleApplication(QtGui.QApplication):
@@ -135,7 +140,7 @@ class SingleApplication(QtGui.QApplication):
         self.main = False
         self.statusBar = False
         self.controlPanel = False
-        #Actual SinglePr
+        #Check for shared memory from other instances and if not created, create them.
         self._key = key
         self.sharedMemory = QtCore.QSharedMemory(self)
         self.sharedMemory.setKey(key)
@@ -144,7 +149,7 @@ class SingleApplication(QtGui.QApplication):
         else:
             self._isRunning=False
             if not self.sharedMemory.create(1):
-                log.info("Application shared memory already exists.")
+                log.info(self.translate("logs", "Application shared memory already exists."))
                 raise RuntimeError(self.sharedMemory.errorString())
                 
     def isRunning(self):
@@ -153,10 +158,10 @@ class SingleApplication(QtGui.QApplication):
 
 class SingleApplicationWithMessaging(SingleApplication):
     """
-    The interprocess messaging class for the Commotion Client. This class extends the single application to allow for instantiations of the Commotion Client which specify that are started with the message paramiter to pass messages to the existing client if it is already running by using its unique key.
+    The interprocess messaging class for the Commotion Client. This class extends the single application to allow for instantiations of the Commotion Client to pass messages to the existing client if it is already running. When a second instance of a Commotion Client is run without a message specified it will reaise the earler clients main window to the front and then close itself.
 
     e.g:
-    python3.3 CommotionClient.py -k commotion --message "COMMAND"
+    python3.3 CommotionClient.py --message "COMMAND"
     """
     
     def __init__(self, argv, key):
@@ -164,7 +169,10 @@ class SingleApplicationWithMessaging(SingleApplication):
 
         self._key = key
         self._timeout = 1000
+        #create server to listen for messages
         self._server = QtNetwork.QLocalServer(self)
+        #Connect to messageAvailable signal created by handleMessage.
+        self.connect(self, QtCore.SIGNAL('messageAvailable'), self.processMessage)
 
         if not self.isRunning():
             bytes.decode
@@ -172,14 +180,23 @@ class SingleApplicationWithMessaging(SingleApplication):
             self._server.listen(self._key)
 
     def handleMessage(self):
+        """
+        Server side implementation of the messaging functions. This function waits for signals it receives and then emits a SIGNAL "messageAvailable" with the decoded message.
+        
+        (Emits a signal instead of just calling a function in case we decide we would like to allow other components or modules to listen for messages from new instances.)
+        """
         socket = self._server.nextPendingConnection()
         if socket.waitForReadyRead(self._timeout):
             self.emit(QtCore.SIGNAL("messageAvailable"), bytes(socket.readAll().data()).decode('utf-8'))
             socket.disconnectFromServer()
+            self.log.debug(self.translate("logs", "message received and emitted in a messageAvailable signal"))
         else:
             self.log.error(socket.errorString())
 
     def sendMessage(self, message):
+        """
+        Message sending function. Connected to local socket specified by shared key and if successful writes the message to it and returns. 
+        """
         if self.isRunning():
             socket = QtNetwork.QLocalSocket(self)
             socket.connectToServer(self._key, QtCore.QIODevice.WriteOnly)
@@ -188,20 +205,23 @@ class SingleApplicationWithMessaging(SingleApplication):
                 return False
             socket.write(str(message).encode("utf-8"))
             if not socket.waitForBytesWritten(self._timeout):
-                log.error(socket.errorString())
+                self.log.error(socket.errorString())
                 return False
             socket.disconnectFromServer()
             return True
-        self.log.debug("Attempted to send message when commotion client application was not currently running.")
+        self.log.debug(self.translate("logs", "Attempted to send message when commotion client application was not currently running."))
         return False
 
     def processMessage(self, message):
+        """
+        Process which processes messages an app receives and takes actions on valid requests.
+        """
         if message == "showMain":
             if self.main != False:
                 self.main.show()
                 self.main.raise_()
         else:
-            self.log.info(QtCore.QCoreApplication.translate("logs", "message \"{0}\" not a supported type.".format(message)))
+            self.log.info(self.translate("logs", "message \"{0}\" not a supported type.".format(message)))
 
 if __name__ == "__main__":
     main()
