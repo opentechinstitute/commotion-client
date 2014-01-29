@@ -107,8 +107,8 @@ def main():
 
     #Start GUI if not started at boot
     if not headless:
-        pass #TODO implement status bar and contrroller
-        ##statusBar = StatusBar.StatusBar()
+        app.main = MainWindow() #Don't show main window in daemon mode so only status bar appears
+        #TODO implement contrroller
         ##controller = CommotionController.CommotionController()
         if not daemon:
             if app.main == False:
