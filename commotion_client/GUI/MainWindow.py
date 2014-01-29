@@ -20,6 +20,7 @@ from PyQt4 import QtGui
 
 #Commotion Client Imports
 from assets import assets
+#from GUI.MenuBar import MenuBar
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -31,25 +32,30 @@ class MainWindow(QtGui.QMainWindow):
         self.dirty = False #The variable to keep track of state for tracking if the gui needs any clean up.
         #set function logger
         self.log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
-        
-        #set main menu to not close application on exit events (once set to true we will close on exit events.)
+
+        #Default Paramiters #TODO to be replaced with paramiters saved between instances later
+
+        #set main menu to not close application on exit events
         self.exitOnClose = False
-        self.tray = trayIcon()
+
+        #self.menuBar = MenuBar(self)
         
-        #connect to tray's exit event to allow application to close. 
+        #Create tray and connect to its exit event to allow application to close.
+        self.tray = trayIcon(self)
         self.connect(self.tray.exit, QtCore.SIGNAL("triggered()"), self.exitEvent)
+        self.connect(self.tray, QtCore.SIGNAL("showMainWindow"), self.bringFront)
 
     def closeEvent(self, event):
         """
         Captures the close event for the main window. When called from exitEvent removes a trayIcon and accepts its demise. When called otherwise will simply hide the main window and ignore the event. 
         """
         if self.exitOnClose:
-            self.log.debug(self.translate("logs", "Application has received a EXIT close event and will shutdown completely."))
+            self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a EXIT close event and will shutdown completely."))
             self.tray.trayIcon.hide()
             del self.tray.trayIcon
             event.accept()
         else:
-            self.log.debug(self.translate("logs", "Application has received a non-exit close event and will hide its main window."))
+            self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a non-exit close event and will hide its main window."))
             self.hide()
             event.setAccepted(True)
             event.ignore()
@@ -61,6 +67,14 @@ class MainWindow(QtGui.QMainWindow):
         print("exit event triggered")
         self.exitOnClose = True
         self.close()
+
+    def bringFront(self):
+        """
+        Brings the main window to the front of the screen. 
+        """
+        self.show()
+        self.raise_()
+
 
 class trayIcon(QtGui.QWidget):
     """
@@ -88,5 +102,4 @@ class trayIcon(QtGui.QWidget):
         if reason == QtGui.QSystemTrayIcon.Context:
             self.trayIcon.contextMenu().show()
         elif reason == QtGui.QSystemTrayIcon.Trigger:
-            self.show()
-            self.raise_()
+            self.emit(QtCore.SIGNAL("showMainWindow"))
