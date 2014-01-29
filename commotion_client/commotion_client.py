@@ -10,6 +10,7 @@ The main python script for implementing the commotion_client GUI.
 
 import sys
 import argparse
+import logging
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
@@ -35,7 +36,7 @@ def main():
     argParser.add_argument("-l", "--logfile", help="Choose a logfile for this instance")
     argParser.add_argument("-d", "--daemon", action="store_true", help="Start the application in Daemon mode (no UI).")
     argParser.add_argument("--headless", action="store_true", help="Start the application in full headless mode (no status bar or UI).")
-    argParser.add_argument("-m", "--message", help="Send a message to any existing Commotion Application.")
+    argParser.add_argument("-m", "--message", help="Send a message to any existing Commotion Application")
     argParser.add_argument("-k", "--key", help="Choose a unique application key for this Commotion Instance", type=str)
     args = argParser.parse_args()
     if args.verbose:
@@ -67,7 +68,7 @@ def main():
     #check w/wo a message
     if args.message:
         msg = args.message
-        app = SingleApplicationWithMessage(sys.argv, key)
+        app = SingleApplicationWithMessaging(sys.argv, key)
         if app.isRunning():
             log.info("Commotion client called when already running. Checking for message.")
             #Checking for custom message
@@ -75,9 +76,10 @@ def main():
             log.info("application is already running, sent following message: \n\"{0}\"".format(msg))
             sys.exit(1)
     else:
-        app = SingleApplication(sys.argv, key)
+        app = SingleApplicationWithMessaging(sys.argv, key)
         if app.isRunning():
-            log.info("application is already running. No message has been sent")
+            log.info("application is already running. Application will be brought to foreground")
+            app.sendMessage("showMain")
             sys.exit(1)
 
     #Enable Translations
@@ -110,6 +112,7 @@ def main():
         pass #TODO IMplement controller
         ##controller = CommotionController.CommotionController()
 
+    app.connect(app, QtCore.SIGNAL('messageAvailable'), app.processMessage)
     #Start Application
     sys.exit(app.exec_())
     print(app.main)
@@ -123,7 +126,11 @@ class SingleApplication(QtGui.QApplication):
     """
 
     def __init__(self, argv, key):
-        super(SingleApplication, self).__init__(argv)
+        super().__init__(argv)
+
+        #set function logger
+        self.log = logging.getLogger("commotion_client."+__name__)
+        
         #Keep Track of main widgets, so as not to recreate them.
         self.main = False
         self.statusBar = False
@@ -146,42 +153,55 @@ class SingleApplication(QtGui.QApplication):
 
 class SingleApplicationWithMessaging(SingleApplication):
     """
-    The message enabled class for Commotion Client. This class extends the single application to allow for command line instantiations of the Commotion Client to pass messages to the existing client if it is already running by using its unique key.
+    The interprocess messaging class for the Commotion Client. This class extends the single application to allow for instantiations of the Commotion Client which specify that are started with the message paramiter to pass messages to the existing client if it is already running by using its unique key.
 
     e.g:
     python3.3 CommotionClient.py -k commotion --message "COMMAND"
     """
     
-    def __init__(self, argv, key, mode):
-        super(SingleApplicationWithMessaging).__init__(self, argv, key)
+    def __init__(self, argv, key):
+        super().__init__(argv, key)
+
         self._key = key
         self._timeout = 1000
         self._server = QtNetwork.QLocalServer(self)
 
-        if not self.IsRunning():
+        if not self.isRunning():
             bytes.decode
             self._server.newConnection.connect(self.handleMessage)
             self._server.listen(self._key)
 
     def handleMessage(self):
-        socket = self.localServer.nextPendingConnection()
+        socket = self._server.nextPendingConnection()
         if socket.waitForReadyRead(self._timeout):
             self.emit(QtCore.SIGNAL("messageAvailable"), bytes(socket.readAll().data()).decode('utf-8'))
             socket.disconnectFromServer()
         else:
-            log.error(socket.errorString())
+            self.log.error(socket.errorString())
 
     def sendMessage(self, message):
         if self.isRunning():
             socket = QtNetwork.QLocalSocket(self)
             socket.connectToServer(self._key, QtCore.QIODevice.WriteOnly)
-            if not socket.WaitForConnected(self._timeout):
+            if not socket.waitForConnected(self._timeout):
+                self.log.error(socket.errorString())
+                return False
+            socket.write(str(message).encode("utf-8"))
+            if not socket.waitForBytesWritten(self._timeout):
                 log.error(socket.errorString())
                 return False
             socket.disconnectFromServer()
             return True
-        log.debug("Attempted to send message when commotion client application was not currently running.")
+        self.log.debug("Attempted to send message when commotion client application was not currently running.")
         return False
+
+    def processMessage(self, message):
+        if message == "showMain":
+            if self.main != False:
+                self.main.show()
+                self.main.raise_()
+        else:
+            self.log.info(QtCore.QCoreApplication.translate("logs", "message \"{0}\" not a supported type.".format(message)))
 
 if __name__ == "__main__":
     main()
