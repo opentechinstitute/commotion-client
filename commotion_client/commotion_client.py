@@ -113,7 +113,7 @@ def main():
         if not daemon:
             if app.main == False:
                 app.main = MainWindow()
-                app.main.show()
+            app.main.show()
     else:
         #Always start controller
         pass #TODO IMplement controller
