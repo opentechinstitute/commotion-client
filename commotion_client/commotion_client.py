@@ -149,7 +149,7 @@ class SingleApplication(QtGui.QApplication):
         else:
             self._isRunning=False
             if not self.sharedMemory.create(1):
-                log.info(self.translate("logs", "Application shared memory already exists."))
+                self.log.info(self.translate("logs", "Application shared memory already exists."))
                 raise RuntimeError(self.sharedMemory.errorString())
                 
     def isRunning(self):
