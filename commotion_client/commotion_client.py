@@ -183,7 +183,7 @@ class SingleApplicationWithMessaging(SingleApplication):
         """
         Server side implementation of the messaging functions. This function waits for signals it receives and then emits a SIGNAL "messageAvailable" with the decoded message.
         
-        (Emits a signal instead of just calling a function in case we decide we would like to allow other components or modules to listen for messages from new instances.)
+        (Emits a signal instead of just calling a function in case we decide we would like to allow other components or extensions to listen for messages from new instances.)
         """
         socket = self._server.nextPendingConnection()
         if socket.waitForReadyRead(self._timeout):

@@ -62,6 +62,6 @@ def set_logging(name, verbosity=None, logfile=None):
 #    [TO CALL LOGGER]
 #
 #    from commotion-client.utils import logger
-#    #This logger should be the packages __name__ to use inheretance from the main commotion package. This way the code in an indivdual module will be small and it will use the logging settings that were defined in the main logging function.
+#    #This logger should be the packages __name__ to use inheretance from the main commotion package. This way the code in an indivdual extension will be small and it will use the logging settings that were defined in the main logging function.
 #    log = logger.getLogger(__name__)
 #    #The main function calls log = logger.set_logging("commotion_client", 5, "/os/specific/logfile/loc")

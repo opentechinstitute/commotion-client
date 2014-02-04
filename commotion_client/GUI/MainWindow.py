@@ -24,7 +24,7 @@ from assets import assets
 
 class MainWindow(QtGui.QMainWindow):
     """
-    The central widget for the commotion client. This widget initalizes all other sub-widgets and modules as well as defines the paramiters of the main GUI container.
+    The central widget for the commotion client. This widget initalizes all other sub-widgets and extensions as well as defines the paramiters of the main GUI container.
     """
 
     def __init__(self, parent=None):

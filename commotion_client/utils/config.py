@@ -23,7 +23,7 @@ def findConfigs(configType, name=None):
     """
     Function used to obtain the path to a config file.
 
-    @param configType The type of configuration file sought. (global, user, module)
+    @param configType The type of configuration file sought. (global, user, extension)
     @param name optional The name of the configuration file if known
 
     @return list of tuples containing the path and name of found config files or False if a config matching the description cannot be found.
@@ -44,7 +44,7 @@ def findConfigs(configType, name=None):
 
 def getConfigPaths(configType):
 
-    configLocations = {"global":"data/global/", "user":"data/user/", "module":"data/modules/"}
+    configLocations = {"global":"data/global/", "user":"data/user/", "extension":"data/extensions/"}
     configFiles = []
     
     try:
