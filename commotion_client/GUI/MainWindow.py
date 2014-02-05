@@ -43,9 +43,13 @@ class MainWindow(QtGui.QMainWindow):
 
         #Create dock for menu-bar TEST
         self.menuDock = QtGui.QDockWidget(self)
+        #turn off title bar
+        #TODO create a vertical title bar that is the "dock handle"
         self.menuDock.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
         self.menuDock.setObjectName("MenuBarDock")
+        #force bar tot he left side
         self.menuDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
+        #apply menu bar to dock and dock to the main window
         self.menuDock.setWidget(self.menuBar)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.menuDock)
 
