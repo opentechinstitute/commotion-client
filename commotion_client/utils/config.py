@@ -29,10 +29,9 @@ def findConfigs(configType, name=None):
     @return list of tuples containing the path and name of found config files or False if a config matching the description cannot be found.
     """
     configFiles = getConfigPaths(configType)
-    configs = list(getConfig(configFiles))
-    if configs == []:
-        log.error(QtCore.QCoreApplication.translate("logs", "No Configs of the chosed type found"))
-        return False
+    if configFiles:
+        configs = getConfig(configFiles)
+        return configs
     elif name != None:
         for conf in configs:
             if conf["name"] and conf["name"] == name:
@@ -40,7 +39,8 @@ def findConfigs(configType, name=None):
         log.error(QtCore.QCoreApplication.translate("logs", "No config of the chosed type named {0} found".format(name)))
         return False
     else:
-        return configs
+        log.error(QtCore.QCoreApplication.translate("logs", "No Configs of the chosed type found"))
+        return False
 
 def getConfigPaths(configType):
 
@@ -49,15 +49,22 @@ def getConfigPaths(configType):
     
     try:
         path = configLocations[configType]
-    except KeyError:
+    except KeyError as e:
         log.error(QtCore.QCoreApplication.translate("logs", "Cannot search for config type {0} as it is an unsupported type.".format(configType)))
+        self.log.debug(e, exc_info=1)
         return False
-    else:
+    try:
         for root, dirs, files in fsUtils.walklevel(path):
             for file_name in files:
                 if file_name.endswith(".conf"):
                     configFiles.append(os.path.join(root, file_name))
-    if configFiles != []:
+    except AssertionError as e:
+        log.error(QtCore.QCoreApplication.translate("logs", "Config file folder at path {0} does not exist. No Config files loaded.".format(path)))
+        self.log.debug(e, exc_info=1)
+    except TypeError as e:
+        log.error(QtCore.QCoreApplication.translate("logs", "No config files found at path {0}. No Config files loaded.".format(path)))
+        self.log.debug(e, exc_info=1)
+    if configFiles:
         return configFiles
     else:
         return False
@@ -79,8 +86,9 @@ def getConfig(paths):
                     yield config
             else:
                 log.error(QtCore.QCoreApplication.translate("logs", "Config file {0} does not exist and therefore cannot be loaded.".format(path)))
-        except:
+        except Exception as e:
             log.error(QtCore.QCoreApplication.translate("logs", "Config file {0} cannot be loaded.".format(path)))
+            self.log.debug(e, exc_info=1)
         
 
 def loadConfig(config):
@@ -94,11 +102,13 @@ def loadConfig(config):
     #Open the file
     try:
         f = open(config, mode='r', encoding="utf-8", errors="strict")
-    except ValueError:
+    except ValueError as e:
         log.error(QtCore.QCoreApplication.translate("logs", "Config files must be in utf-8 format to avoid data loss. The config file {0} is improperly formatted ".format(config)))
+        self.log.debug(e, exc_info=1)
         return False
-    except:
+    except Exception as e:
         log.error(QtCore.QCoreApplication.translate("logs", "An unknown error has occured in opening config file {0}. Please check that this file exists and is not corrupted.".format(config)))
+        self.log.debug(e, exc_info=1)
         return False
     else:
         tmpMsg = f.read()
@@ -107,8 +117,10 @@ def loadConfig(config):
         data = json.loads(tmpMsg)
         log.debug(QtCore.QCoreApplication.translate("logs", "Successfully loaded {0}".format(config)))
         return data
-    except ValueError:
+    except ValueError as e:
         log.error(QtCore.QCoreApplication.translate("logs", "Failed to load {0} due to a non-json or otherwise invalid file type".format(config)))
+        self.log.debug(e, exc_info=1)
         return False
-    except:
+    except Exception as e:
         log.error(QtCore.QCoreApplication.translate("logs", "Failed to load {0} due to an unknown error.".format(config)))
+        self.log.debug(e, exc_info=1)
