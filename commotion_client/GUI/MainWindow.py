@@ -20,7 +20,7 @@ from PyQt4 import QtGui
 
 #Commotion Client Imports
 from assets import assets
-#from GUI.MenuBar import MenuBar
+from GUI.MenuBar import MenuBar
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -37,13 +37,34 @@ class MainWindow(QtGui.QMainWindow):
 
         #set main menu to not close application on exit events
         self.exitOnClose = False
+                
+        #Set up menu bar.
+        self.menuBar = MenuBar(self)
 
-        #self.menuBar = MenuBar(self)
+        #Create dock for menu-bar TEST
+        self.menuDock = QtGui.QDockWidget(self)
+        self.menuDock.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
+        self.menuDock.setObjectName("MenuBarDock")
+        self.menuDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
+        self.menuDock.setWidget(self.menuBar)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.menuDock)
+
+
+        #set up viewport
+        #self.viewport = Viewport(self)
         
-        #Create tray and connect to its exit event to allow application to close.
+        #Create slot to monitor when menu-bar wants the main window to change the main-viewport
+        self.connect(self.menuBar, QtCore.SIGNAL("viewportRequested()"), self.changeViewport)
+        
+        #Create tray
         self.tray = trayIcon(self)
+        #connect to tray events for closing application and showing main window.
         self.connect(self.tray.exit, QtCore.SIGNAL("triggered()"), self.exitEvent)
         self.connect(self.tray, QtCore.SIGNAL("showMainWindow"), self.bringFront)
+
+    def changeViewport(self, viewport):
+        self.log.debug(QtCore.QCoreApplication.translate("logs", "Request to change viewport received."))
+        self.viewport.setViewport(viewport)
 
     def closeEvent(self, event):
         """
