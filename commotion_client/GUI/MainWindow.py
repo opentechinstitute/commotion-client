@@ -26,6 +26,9 @@ class MainWindow(QtGui.QMainWindow):
     """
     The central widget for the commotion client. This widget initalizes all other sub-widgets and extensions as well as defines the paramiters of the main GUI container.
     """
+    
+    #Closing Signal used by children to do any clean-up or saving needed
+    closing = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__()
@@ -34,7 +37,12 @@ class MainWindow(QtGui.QMainWindow):
         self.log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
 
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
-        self.loadSettings()
+        try:
+            self.loadSettings()
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load windwo settings."))
+            self.log.debug(e, exc_info=1)
+            raise
 
         #set main menu to not close application on exit events
         self.exitOnClose = False
@@ -77,6 +85,7 @@ class MainWindow(QtGui.QMainWindow):
         #connect to tray events for closing application and showing main window.
         self.connect(self.tray.exit, QtCore.SIGNAL("triggered()"), self.exitEvent)
         self.connect(self.tray, QtCore.SIGNAL("showMainWindow"), self.bringFront)
+        #parent.crash("HI")
 
     def toggleMenuBar(self):
         #if menu shown... then
@@ -110,52 +119,71 @@ class MainWindow(QtGui.QMainWindow):
         """
         Closes and exits the entire commotion program.
         """
-        print("exit event triggered")
+        self.closing.emit() #send signal for others to clean up if they need to
+        if self.dirty:
+            self.saveSettings()
         self.exitOnClose = True
         self.close()
 
     def bringFront(self):
         """
-        Brings the main window to the front of the screen. 
+        Brings the main window to the front of the screen.
         """
         self.show()
         self.raise_()
 
     def loadSettings(self):
-        default = {
+        """
+        Loads window geometry from saved settings and sets window to those settings.
+        """
+        defaults = {
             #QRect(posX, posY, width, height)
-            "geometry":QtCore.QRect(300, 300, 640, 480), #TODO set sane defaults and catalogue in HIG 
+            "geometry":QtCore.QRect(300, 300, 640, 480), #TODO set sane defaults and catalogue in HIG
         }
 
         _settings = QtCore.QSettings()
         _settings.beginGroup("MainWindow")
 
-        #Load settings from saved, or use defaults        
-        geometry = _settings.value("geometry") or default['geometry']
-        user = _settings.value("user") or None
-        
+        #Load settings from saved, or use defaults
+        try:
+            geometry = _settings.value("geometry") or defaults['geometry']
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not load window geometry from settings file or defaults."))
+            self.log.debug(e, exc_info=1)
+            raise
         _settings.endGroup()
-        self.setGeometry(geometry)
+        try:
+            self.setGeometry(geometry)
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Cannot create GUI window."))
+            self.log.debug(e, exc_info=1)
+            raise
 
 
     def saveSettings(self):
+        """
+        Saves current window geometry
+        """
 
         _settings = QtCore.QSettings()
         _settings.beginGroup("MainWindow")
-
-        #Load settings from saved, or use defaults        
-        _settings.setValue("sizeX") or default['winSizeX']
-        _settings.setValue("sizeY") or default['winSizeY']
-        _settings.setValue("positionX") or default['positionX']
-        _settings.setValue("positionY") or default['positionY']
-
+        #Save settings
+        try:
+            _settings.setValue("geometry", self.geometry())
+        except Exception as e:
+            self.log.warn(QtCore.QCoreApplication.translate("logs", "Could not save window geometry. Will continue without saving window geometry."))
+            self.log.debug(e, exc_info=1)
         _settings.endGroup()
         
-    def getPosition(self):
-        pass
+
+    def crash(self, msg):
+        self.closing.emit() #send signal for others to clean up if they need to
+        self.crash_report(msg)
+        self.exitOnClose = True
+        self.close()
+
         
-    def getWindowSize(self):
-        pass
+        
 
 class trayIcon(QtGui.QWidget):
     """
