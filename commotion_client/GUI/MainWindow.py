@@ -28,35 +28,47 @@ class MainWindow(QtGui.QMainWindow):
     """
 
     def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super().__init__()
         self.dirty = False #The variable to keep track of state for tracking if the gui needs any clean up.
         #set function logger
         self.log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
 
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
+        self.loadSettings()
 
         #set main menu to not close application on exit events
         self.exitOnClose = False
-                
-        #Set up menu bar.
-        self.menuBar = MenuBar(self)
 
+
+        #Set up Main Viewport
+        #self.viewport = Viewport(self)
+
+
+        #REMOVE THIS TEST CENTRAL WIDGET SECTION
+        #==================================
+        from tests.extensions.test_ext001 import myMain
+        self.centralwidget = QtGui.QWidget(self)
+        self.centralwidget.setMinimumSize(600,600)
+        self.setCentralWidget(myMain.viewport(self))
+        
+        #==================================
+        
+        #Set up menu bar.
+        self.menuBar = MenuBar(self)        
+        
         #Create dock for menu-bar TEST
         self.menuDock = QtGui.QDockWidget(self)
         #turn off title bar
         #TODO create a vertical title bar that is the "dock handle"
         self.menuDock.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
+        #Set Name of dock so we can hide and show it.
         self.menuDock.setObjectName("MenuBarDock")
-        #force bar tot he left side
+        #force bar to the left side
         self.menuDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
         #apply menu bar to dock and dock to the main window
         self.menuDock.setWidget(self.menuBar)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.menuDock)
 
-
-        #set up viewport
-        #self.viewport = Viewport(self)
-        
         #Create slot to monitor when menu-bar wants the main window to change the main-viewport
         self.connect(self.menuBar, QtCore.SIGNAL("viewportRequested()"), self.changeViewport)
         
@@ -66,6 +78,15 @@ class MainWindow(QtGui.QMainWindow):
         self.connect(self.tray.exit, QtCore.SIGNAL("triggered()"), self.exitEvent)
         self.connect(self.tray, QtCore.SIGNAL("showMainWindow"), self.bringFront)
 
+    def toggleMenuBar(self):
+        #if menu shown... then
+        #DockToHide = self.findChild(name="MenuBarDock")
+        #QMainWindow.removeDockWidget (self, QDockWidget dockwidget)
+        #else
+        #bool QMainWindow.restoreDockWidget (self, QDockWidget dockwidget)
+        pass
+
+        
     def changeViewport(self, viewport):
         self.log.debug(QtCore.QCoreApplication.translate("logs", "Request to change viewport received."))
         self.viewport.setViewport(viewport)
@@ -100,6 +121,45 @@ class MainWindow(QtGui.QMainWindow):
         self.show()
         self.raise_()
 
+    def loadSettings(self):
+        default = {
+            "winSize": QtCore.QSize(640, 480),
+            "position": QtCore.QPoint(300,300)
+        }
+        
+        _settings = QtCore.QSettings()
+        _settings.beginGroup("MainWindow")
+
+        #Load settings from saved, or use defaults        
+        winSize = _settings.value("size") or default['winSize']
+        position = _settings.value("position") or default['position']
+        
+        _settings.endGroup()
+        
+        self.resize(winSize)
+        self.move(position)
+        print(dir(self.geometry()))
+        self.setGeometry(self.geometry())
+
+
+    def saveSettings(self):
+
+        _settings = QtCore.QSettings()
+        _settings.beginGroup("MainWindow")
+
+        #Load settings from saved, or use defaults        
+        _settings.setValue("sizeX") or default['winSizeX']
+        _settings.setValue("sizeY") or default['winSizeY']
+        _settings.setValue("positionX") or default['positionX']
+        _settings.setValue("positionY") or default['positionY']
+
+        _settings.endGroup()
+        
+    def getPosition(self):
+        pass
+        
+    def getWindowSize(self):
+        pass
 
 class trayIcon(QtGui.QWidget):
     """

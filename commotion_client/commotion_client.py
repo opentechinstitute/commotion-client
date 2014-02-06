@@ -105,10 +105,16 @@ def main():
     app.setWindowIcon(QtGui.QIcon(":commotion_logo.png"))
     __version__ = "1.0"
 
+    #Set up settings Saving and restoring TODO DO I NEED THIS HERE?"
+    _settings = QtCore.QSettings()
+#    _settings.setValue("tests/testVal", 44)
+#    _settings.sync()
+#    print(_settings.value("tests/testVal"))
+
     #Start GUI if not started at boot
     if not headless:
         app.main = MainWindow() #Don't show main window in daemon mode so only status bar appears
-        #TODO implement contrroller
+       #TODO implement contrroller
         ##controller = CommotionController.CommotionController()
         if not daemon:
             if app.main == False:
