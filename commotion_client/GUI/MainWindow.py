@@ -123,23 +123,19 @@ class MainWindow(QtGui.QMainWindow):
 
     def loadSettings(self):
         default = {
-            "winSize": QtCore.QSize(640, 480),
-            "position": QtCore.QPoint(300,300)
+            #QRect(posX, posY, width, height)
+            "geometry":QtCore.QRect(300, 300, 640, 480), #TODO set sane defaults and catalogue in HIG 
         }
-        
+
         _settings = QtCore.QSettings()
         _settings.beginGroup("MainWindow")
 
         #Load settings from saved, or use defaults        
-        winSize = _settings.value("size") or default['winSize']
-        position = _settings.value("position") or default['position']
+        geometry = _settings.value("geometry") or default['geometry']
+        user = _settings.value("user") or None
         
         _settings.endGroup()
-        
-        self.resize(winSize)
-        self.move(position)
-        print(dir(self.geometry()))
-        self.setGeometry(self.geometry())
+        self.setGeometry(geometry)
 
 
     def saveSettings(self):
