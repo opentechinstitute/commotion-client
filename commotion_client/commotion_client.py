@@ -26,7 +26,7 @@ from PyQt4 import QtNetwork
 
 from assets import assets
 from utils import logger
-from GUI.MainWindow import MainWindow
+from GUI.main_window import MainWindow
 #from commotion_controller import CommotionController #TODO Create Controller
 
 
@@ -113,17 +113,29 @@ def main():
 
     #Start GUI if not started at boot
     if not headless:
-        app.main = MainWindow() #Don't show main window in daemon mode so only status bar appears
+        try:
+            app.main = MainWindow() #Don't show main window in daemon mode so only status bar appears
+        except Exception as e:
+            app.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
+            app.log.debug(e, exc_info=1)
+            sys.exit(1)
+            
+
        #TODO implement contrroller
         ##controller = CommotionController.CommotionController()
         if not daemon:
             if app.main == False:
-                app.main = MainWindow()
+                try:
+                    app.main = MainWindow()
+                except Exception as e:
+                    app.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
+                    app.log.debug(e, exc_info=1)
+                    sys.exit(1)
             app.main.show()
     else:
         #Always start controller
         pass #TODO IMplement controller
-        ##controller = CommotionController.CommotionController()
+        ##app.controller = CommotionController.CommotionController()
 
     #Start Application
     sys.exit(app.exec_())
@@ -228,6 +240,13 @@ class SingleApplicationWithMessaging(SingleApplication):
                 self.main.raise_()
         else:
             self.log.info(self.translate("logs", "message \"{0}\" not a supported type.".format(message)))
+
+    def crash(self, message):
+        print(message)
+        self.exit()
+
+        
+        
 
 if __name__ == "__main__":
     main()
