@@ -20,7 +20,8 @@ from PyQt4 import QtGui
 
 #Commotion Client Imports
 from assets import assets
-from GUI.MenuBar import MenuBar
+from GUI.menu_bar import MenuBar
+#from GUI.crash_report import CrashReport
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -36,11 +37,19 @@ class MainWindow(QtGui.QMainWindow):
         #set function logger
         self.log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
 
+        try:
+            #self.crash_report() = CrashReport()
+            pass
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load crash reporter. Ironically, this means that the application must be halted."))
+            self.log.debug(e, exc_info=1)
+            raise
+        
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
         try:
             self.loadSettings()
         except Exception as e:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load windwo settings."))
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load window settings."))
             self.log.debug(e, exc_info=1)
             raise
 
@@ -85,7 +94,7 @@ class MainWindow(QtGui.QMainWindow):
         #connect to tray events for closing application and showing main window.
         self.connect(self.tray.exit, QtCore.SIGNAL("triggered()"), self.exitEvent)
         self.connect(self.tray, QtCore.SIGNAL("showMainWindow"), self.bringFront)
-        #parent.crash("HI")
+        #crash("YOU NEED TO IMPLEMENT THE CRASHING FUNCTIONALITY HERE")
 
     def toggleMenuBar(self):
         #if menu shown... then

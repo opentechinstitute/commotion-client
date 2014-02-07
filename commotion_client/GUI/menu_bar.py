@@ -161,5 +161,3 @@ class subMenuWidget(QtGui.QLabel):
         
     def mouseReleaseEvent(self, ev):
         self.clicked.emit()
-
-    
