@@ -10,7 +10,7 @@ __pycache__
 # example code
 examples/
 # PyQt auto-created asset tracking file.
-commotion_client/assets/assets.py
+*_rc.py
 commotion_client/temp/
 #All compiled versions of designer created UI files.
 Ui_*.py
