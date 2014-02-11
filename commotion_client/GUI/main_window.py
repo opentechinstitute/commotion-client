@@ -111,7 +111,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def closeEvent(self, event):
         """
-        Captures the close event for the main window. When called from exitEvent removes a trayIcon and accepts its demise. When called otherwise will simply hide the main window and ignore the event. 
+        Captures the close event for the main window. When called from exitEvent removes a trayIcon and accepts its demise. When called otherwise will simply hide the main window and ignore the event.
         """
         if self.exitOnClose:
             self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a EXIT close event and will shutdown completely."))
@@ -196,7 +196,7 @@ class MainWindow(QtGui.QMainWindow):
 
 class trayIcon(QtGui.QWidget):
     """
-    The Commotion tray icon. This icon object is the only object that can close the entire application. 
+    The Commotion tray icon. This icon object is the only object that can close the entire application.
     """
 
     def __init__(self, parent=None):
