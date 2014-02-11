@@ -5,7 +5,7 @@ When a new asset is created it must be added to the commotion_assets.qrc xml fil
 For testing the commotion_client without using the build scripts you must create the assets file by running the following command line argument.
 
 <code>
-pyrcc4 -py3 commotion_assets.qrc -o assets.py 
+pyrcc4 -py3 commotion_assets.qrc -o commotion_assets_rc.py
 </code>
 
 When new assets are added or old assets are changed... really any change to any assets  you MUST run this command. This will re-create the assets.py file.
