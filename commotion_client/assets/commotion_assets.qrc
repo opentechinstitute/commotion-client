@@ -1,5 +1,16 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
-  <file alias="commotion_logo.png">images/commotion_logo.png</file>
+  <!--Commotion Logo -->
+  <file alias="logo16.png">images/logo16.png</file>
+  <file alias="logo32.png">images/logo32.png</file>
+  <file alias="logo48.png">images/logo48.png</file>
+  <file alias="logo62.png">images/logo62.png</file>
+  <file alias="logo256.png">images/logo256.png</file>
+  <file alias="logo512.png">images/logo512.png</file>
+  <file alias="logo1024.png">images/logo1024.png</file>
+  <!--Alert icon (!) -->
+  <file alias="alert32.png">images/alert32.png</file>
+  <file alias="alert48.png">images/alert48.png</file>
+  <file alias="alert62.png">images/alert62.png</file>
 </qresource>
 </RCC>
