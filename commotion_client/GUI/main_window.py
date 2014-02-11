@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-MainWindow
+main_window
 
 The main window and system tray for the commotion_client pyqt GUI.
 
