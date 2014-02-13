@@ -30,6 +30,7 @@ class MainWindow(QtGui.QMainWindow):
     
     #Closing Signal used by children to do any clean-up or saving needed
     closing = QtCore.pyqtSignal()
+    app_message = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -199,7 +200,7 @@ class MainWindow(QtGui.QMainWindow):
         """
         self.closing.emit() #send signal for others to clean up if they need to
         if crash_type == "restart":
-            self.parent.exit(42)
+            self.app_message.emit("restart")
         else:
             self.exitOnClose = True
             self.close()
