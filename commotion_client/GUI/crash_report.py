@@ -51,7 +51,7 @@ class CrashReport(Ui_crash_report_window.crash_window):
     def crash_alert(self, error):
         if error:
             self.error_text.setText(error)
-            self.error_msg = {"error":error}
+            self.error_msg = error
             self.retranslateUi(self)
                 
         self.crash_override.emit()
@@ -73,7 +73,7 @@ class CrashReport(Ui_crash_report_window.crash_window):
         
         #Add initial error
         if self.error_msg:
-            self.gatherer.add_item("error", self.error_msg)
+            self.gatherer.add_item("error", {"error":self.error_msg})
 
         #connect the add_report signal to the report gatherer's add report function.
         #called from mainWindow as: self.SUBSECTION.crashReport.connect(self.CrashReport.add_report)
@@ -133,8 +133,7 @@ class CrashReport(Ui_crash_report_window.crash_window):
         """
         #Save user comments
         try:
-            self.compiled_report['comments'] = {}
-            self.compiled_report['comments']['crashComments'] = str(self.comment_field.toPlainText())
+            self.compiled_report['error']['comments'] = str(self.comment_field.toPlainText())
         except Exception as e:
             self.log.info(QtCore.QCoreApplication.translate("logs", "The crash reporter could not store user comments in the crash report."))
             self.log.debug(e, exc_info=1)
