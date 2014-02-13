@@ -19,9 +19,9 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 #Commotion Client Imports
-from assets import assets
+from assets import commotion_assets_rc
 from GUI.menu_bar import MenuBar
-#from GUI.crash_report import CrashReport
+from GUI.crash_report import CrashReport
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -38,12 +38,13 @@ class MainWindow(QtGui.QMainWindow):
         self.log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
 
         try:
-            #self.crash_report() = CrashReport()
-            pass
+            self.crash_report = CrashReport()
         except Exception as e:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load crash reporter. Ironically, this means that the application must be halted."))
             self.log.debug(e, exc_info=1)
             raise
+        else:
+            self.crash_report.crash.connect(self.crash)
         
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
         try:
@@ -62,16 +63,23 @@ class MainWindow(QtGui.QMainWindow):
 
 
         #REMOVE THIS TEST CENTRAL WIDGET SECTION
-        #==================================
+        #==================================        
         from tests.extensions.test_ext001 import myMain
         self.centralwidget = QtGui.QWidget(self)
         self.centralwidget.setMinimumSize(600,600)
-        self.setCentralWidget(myMain.viewport(self))
-        
+        self.central_app = myMain.viewport(self)
+        self.setCentralWidget(self.central_app)
+
+        #connect central app to crash reporter
+        self.central_app.data_report.connect(self.crash_report.crash_info)
+        self.crash_report.crash_override.connect(self.central_app.start_report_collection)
+        #connect error reporter to crash reporter
+        self.central_app.error_report.connect(self.crash_report.alert_user)
+
         #==================================
         
         #Set up menu bar.
-        self.menuBar = MenuBar(self)        
+        self.menuBar = MenuBar(self)
         
         #Create dock for menu-bar TEST
         self.menuDock = QtGui.QDockWidget(self)
@@ -185,13 +193,16 @@ class MainWindow(QtGui.QMainWindow):
         _settings.endGroup()
         
 
-    def crash(self, msg):
+    def crash(self, crash_type):
+        """
+        Emits a closing signal to allow other windows who need to clean up to clean up and then exits the application.
+        """
         self.closing.emit() #send signal for others to clean up if they need to
-        self.crash_report(msg)
-        self.exitOnClose = True
-        self.close()
-
-        
+        if crash_type == "restart":
+            self.parent.exit(42)
+        else:
+            self.exitOnClose = True
+            self.close()
         
 
 class trayIcon(QtGui.QWidget):
@@ -206,7 +217,7 @@ class trayIcon(QtGui.QWidget):
         self.exit = QtGui.QAction(QtGui.QIcon(), "Exit", self)
 
         #set tray Icon and it's menu which allows closing from it.
-        self.trayIcon = QtGui.QSystemTrayIcon(QtGui.QIcon(":commotion_logo.png"), self)
+        self.trayIcon = QtGui.QSystemTrayIcon(QtGui.QIcon(":logo32.png"), self)
         menu = QtGui.QMenu(self)
         menu.addAction(self.exit) #add exit action to tray icon
         self.trayIcon.setContextMenu(menu)
