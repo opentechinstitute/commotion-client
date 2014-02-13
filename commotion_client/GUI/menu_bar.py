@@ -61,7 +61,6 @@ class MenuBar(QtGui.QWidget):
             for topLevelItem in topLevel:
                 try:
                     currentItem = self.addMenuItem(topLevelItem, extensions)
-                    print(currentItem)
                     if currentItem:
                         menuItems[topLevelItem] = currentItem
                 except Exception as e:
