@@ -24,7 +24,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4 import QtNetwork
 
-from assets import assets
+from assets import commotion_assets_rc
 from utils import logger
 from GUI.main_window import MainWindow
 #from commotion_controller import CommotionController #TODO Create Controller
@@ -72,76 +72,86 @@ def main():
     #Enable Logging
     log = logger.set_logging("commotion_client", logLevel, logFile)
 
-    #Create Instance of Commotion Application
-    app = SingleApplicationWithMessaging(sys.argv, key)
+    #set restart code to pass back if restarted
+    restart_code = 42
+    #Start application exit while loop to catch restarts
+    while True:
 
-    #Enable Translations
-    locale = QtCore.QLocale.system().name()
-    qtTranslator = QtCore.QTranslator()
-    if qtTranslator.load("qt_"+locale, ":/"):
-        app.installTranslator(qtTranslator)
-        appTranslator = QtCore.QTranslator()
-        if appTranslator.load("imagechanger_"+locale, ":/"):
-            app.installTranslator(appTranslator)
+        #Create Instance of Commotion Application
+        app = SingleApplicationWithMessaging(sys.argv, key)
 
-
-    #check w/wo a message
-    if app.isRunning():
-        if args.message:
-            #Checking for custom message
-            msg = args.message
-            app.sendMessage(msg)
-            log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
-        else:
-            log.info(app.translate("logs", "application is already running. Application will be brought to foreground"))
-            app.sendMessage("showMain")
-        sys.exit(1)
+        #Enable Translations
+        locale = QtCore.QLocale.system().name()
+        qtTranslator = QtCore.QTranslator()
+        if qtTranslator.load("qt_"+locale, ":/"):
+            app.installTranslator(qtTranslator)
+            appTranslator = QtCore.QTranslator()
+            if appTranslator.load("imagechanger_"+locale, ":/"):
+                app.installTranslator(appTranslator)
 
 
-    #Set Application and Organization Information
-    app.setOrganizationName("The Open Technology Institute")
-    app.setOrganizationDomain("commotionwireless.net")
-    app.setApplicationName(app.translate("main", "Commotion Client")) #special translation case since we are outside of the main application
-    app.setWindowIcon(QtGui.QIcon(":commotion_logo.png"))
-    __version__ = "1.0"
-
-    #Set up settings Saving and restoring TODO DO I NEED THIS HERE?"
-    _settings = QtCore.QSettings()
-#    _settings.setValue("tests/testVal", 44)
-#    _settings.sync()
-#    print(_settings.value("tests/testVal"))
-
-    #Start GUI if not started at boot
-    if not headless:
-        try:
-            app.main = MainWindow() #Don't show main window in daemon mode so only status bar appears
-        except Exception as e:
-            app.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
-            app.log.debug(e, exc_info=1)
+        #check w/wo a message
+        if app.isRunning():
+            if args.message:
+                #Checking for custom message
+                msg = args.message
+                app.sendMessage(msg)
+                log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
+            else:
+                log.info(app.translate("logs", "application is already running. Application will be brought to foreground"))
+                app.sendMessage("showMain")
             sys.exit(1)
+
+
+        #Set Application and Organization Information
+        app.setOrganizationName("The Open Technology Institute")
+        app.setOrganizationDomain("commotionwireless.net")
+        app.setApplicationName(app.translate("main", "Commotion Client")) #special translation case since we are outside of the main application
+        app.setWindowIcon(QtGui.QIcon(":logo48.png"))
+        app.setApplicationVersion("1.0") #TODO Generate this on build
+
+        #Set up settings Saving and restoring TODO DO I NEED THIS HERE?"
+        _settings = QtCore.QSettings()
+
+        #Start GUI if not started at boot
+        if not headless:
+            try:
+                app.main = MainWindow()
+                #Don't show main window in daemon mode so only status bar appears
+            except Exception as e:
+                app.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
+                app.log.debug(e, exc_info=1)
+                sys.exit(1)
             
 
-       #TODO implement contrroller
-        ##controller = CommotionController.CommotionController()
-        if not daemon:
-            if app.main == False:
-                try:
-                    app.main = MainWindow()
-                except Exception as e:
-                    app.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
-                    app.log.debug(e, exc_info=1)
-                    sys.exit(1)
-            app.main.show()
-    else:
-        #Always start controller
-        pass #TODO IMplement controller
-        ##app.controller = CommotionController.CommotionController()
+            #TODO implement contrroller
+            ##controller = CommotionController.CommotionController()
+            if not daemon:
+                if app.main == False:
+                    try:
+                        app.main = MainWindow()
+                    except Exception as e:
+                        app.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
+                        app.log.debug(e, exc_info=1)
+                        sys.exit(1)
+                app.main.show()
+        else:
+            #Always start controller
+            pass #TODO IMplement controller
+            ##app.controller = CommotionController.CommotionController()
 
-    #Start Application
-    sys.exit(app.exec_())
-    
+        #Start Application
+        exit_code = app.exec_()
+
+        #check if we are restarting, and if so, clean up
+        if exit_code != restart_code:
+            break
+        log.debug(app.translate("logs", "Restarting"))
+        del app
+
     #Log at shutdown when verbose is specified
     log.debug(app.translate("logs", "Shutting down"))
+    sys.exit(exit_code)
     
 class SingleApplication(QtGui.QApplication):
     """
