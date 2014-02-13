@@ -99,7 +99,7 @@ def compileUiFiles():
         """
         return py_dir, "Ui_{0}".format(py_file)
     
-    compileUiDir(".", True, pyName)
+    compileUiDir(".", True, pyName, pyqt3_wrapper=True, )
 
 
 def main(argv):
