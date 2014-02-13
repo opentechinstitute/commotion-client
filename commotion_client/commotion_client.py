@@ -30,14 +30,8 @@ from GUI.main_window import MainWindow
 #from commotion_controller import CommotionController #TODO Create Controller
 
 
-#==================================
-# Main Applicaiton Creator
-#==================================
-def main():
-    """
-    Function that handles command line arguments, translation, and creates the main application.
-    """
-    
+
+def get_args():
     #Handle command line arguments
     argParser = argparse.ArgumentParser(description="Commotion Client")
     argParser.add_argument("-v", "--verbose", help="Define the verbosity of the Commotion Client.", type=int, choices=range(1, 6))
@@ -47,26 +41,24 @@ def main():
     argParser.add_argument("-m", "--message", help="Send a message to any existing Commotion Application")
     argParser.add_argument("-k", "--key", help="Choose a unique application key for this Commotion Instance", type=str)
     args = argParser.parse_args()
-    if args.verbose:
-        logLevel = args.verbose
-    else:
-        logLevel = 2 #TODO getConfig() #actually want to get this from commotion_config
-    if args.logfile:
-        logFile = args.logfile
-    else:
-        logFile = "temp/logfile.temp" #TODO change the logfile to be grabbed from the commotion config reader
-    if args.key:
-        key = args.key
-    else:
-        key = "commotionRocks" #TODO Should there be a default key?
-    if args.headless:
-        headless = True
-    else:
-        headless = False
-    if args.daemon:
-        daemon = True
-    else:
-        daemon = False
+    parsed_args = {}
+    parsed_args['logLevel'] = args.verbose if args.verbose else 2 #TODO getConfig() #actually want to get this from commotion_config
+    parsed_args['logFile'] = args.logfile if args.logfile else "temp/logfile.temp" #TODO change the logfile to be grabbed from the commotion config reader
+    parsed_args['key'] = args.key if args.key else "commotionRocks" #TODO the key is PRIME easter-egg fodder
+    parsed_args['headless'] = True if args.headless else False
+    #daemon mode turned off if headless is on.
+    parsed_args['daemon'] = True if (args.daemon and not args.headless) else False 
+    return parsed_args
+
+#==================================
+# Main Applicaiton Creator
+#==================================
+
+def main():
+    """
+    Function that handles command line arguments, translation, and creates the main application.
+    """
+    args = get_args()
 
         
     #Enable Logging
