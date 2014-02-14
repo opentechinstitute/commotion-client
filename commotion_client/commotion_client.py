@@ -60,97 +60,47 @@ def main():
     """
     args = get_args()
 
-        
     #Enable Logging
-    log = logger.set_logging("commotion_client", logLevel, logFile)
+    log = logger.set_logging("commotion_client", args['logLevel'], args['logFile'])
+    
+    #Create Instance of Commotion Application
+    app = CommotionClientApplication(args['key'], args['status'], sys.argv)
 
-    #set restart code to pass back if restarted
-    restart_code = 42
-    #Start application exit while loop to catch restarts
-    while True:
+    #Enable Translations #TODO This code needs to be evaluated to ensure that it is pulling in correct translators
+    locale = QtCore.QLocale.system().name()
+    qtTranslator = QtCore.QTranslator()
+    if qtTranslator.load("qt_"+locale, ":/"):
+        app.installTranslator(qtTranslator)
+        appTranslator = QtCore.QTranslator()
+        if appTranslator.load("imagechanger_"+locale, ":/"): #TODO This code needs to be evaluated to ensure that it syncs with any internationalized images
+            app.installTranslator(appTranslator)
 
-        #Create Instance of Commotion Application
-        app = SingleApplicationWithMessaging(sys.argv, key)
-
-        #Enable Translations
-        locale = QtCore.QLocale.system().name()
-        qtTranslator = QtCore.QTranslator()
-        if qtTranslator.load("qt_"+locale, ":/"):
-            app.installTranslator(qtTranslator)
-            appTranslator = QtCore.QTranslator()
-            if appTranslator.load("imagechanger_"+locale, ":/"):
-                app.installTranslator(appTranslator)
-
-
-        #check w/wo a message
-        if app.isRunning():
-            if args.message:
-                #Checking for custom message
-                msg = args.message
-                app.sendMessage(msg)
-                log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
-            else:
-                log.info(app.translate("logs", "application is already running. Application will be brought to foreground"))
-                app.sendMessage("showMain")
-            sys.exit(1)
-
-
-        #Set Application and Organization Information
-        app.setOrganizationName("The Open Technology Institute")
-        app.setOrganizationDomain("commotionwireless.net")
-        app.setApplicationName(app.translate("main", "Commotion Client")) #special translation case since we are outside of the main application
-        app.setWindowIcon(QtGui.QIcon(":logo48.png"))
-        app.setApplicationVersion("1.0") #TODO Generate this on build
-
-        #Set up settings Saving and restoring TODO DO I NEED THIS HERE?"
-        _settings = QtCore.QSettings()
-
-        #Start GUI if not started at boot
-        if not headless:
-            try:
-                app.main = MainWindow()
-                #Don't show main window in daemon mode so only status bar appears
-            except Exception as e:
-                app.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
-                app.log.debug(e, exc_info=1)
-                sys.exit(1)
-            
-
-            #TODO implement contrroller
-            ##controller = CommotionController.CommotionController()
-            if not daemon:
-                if app.main == False:
-                    try:
-                        app.main = MainWindow()
-                    except Exception as e:
-                        app.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
-                        app.log.debug(e, exc_info=1)
-                        sys.exit(1)
-                app.main.show()
+    #check for existing application w/wo a message
+    if app.isRunning():
+        if args.message:
+            #Checking for custom message
+            msg = args.message
+            app.sendMessage(msg)
+            log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
         else:
-            #Always start controller
-            pass #TODO IMplement controller
-            ##app.controller = CommotionController.CommotionController()
+            log.info(app.translate("logs", "application is already running. Application will be brought to foreground"))
+            app.sendMessage("showMain")
+        sys.exit(1)
 
-        #Start Application
-        exit_code = app.exec_()
-
-        #check if we are restarting, and if so, clean up
-        if exit_code != restart_code:
-            break
-        log.debug(app.translate("logs", "Restarting"))
-        del app
-
-    #Log at shutdown when verbose is specified
+    #initialize client (GUI, controller, etc)
+    app.init_client()
+        
+    sys.exit(app.exec_())
     log.debug(app.translate("logs", "Shutting down"))
-    sys.exit(exit_code)
+
+
     
 class SingleApplication(QtGui.QApplication):
     """
     Single application instance uses a key and shared memory to ensure that only one instance of the Commotion client is ever running at the same time.
     """
 
-    def __init__(self, argv, key):
+    def __init__(self, key, argv):
         super().__init__(argv)
 
         #set function logger
@@ -184,8 +134,8 @@ class SingleApplicationWithMessaging(SingleApplication):
     python3.3 CommotionClient.py --message "COMMAND"
     """
     
-    def __init__(self, argv, key):
-        super().__init__(argv, key)
+    def __init__(self, key, argv):
+        super().__init__(key, argv)
 
         self._key = key
         self._timeout = 1000
@@ -236,18 +186,283 @@ class SingleApplicationWithMessaging(SingleApplication):
         """
         Process which processes messages an app receives and takes actions on valid requests.
         """
+        self.log.debug(self.translate("logs", "Applicaiton received a message {0}, but does not have a message parser to handle it.").format(message))
+
+        
+class CommotionClientApplication(SingleApplicationWithMessaging):
+    """
+    The final layer of the class onion that is the Commotion client. This class includes functions to enable the sub-processes and modules of the Commotion Client (GUI's and controllers). 
+    """
+    
+    def __init__(self, key, status, argv):
+        super().__init__(key, argv)
+        #Set Application and Organization Information
+        self.setOrganizationName("The Open Technology Institute")
+        self.setOrganizationDomain("commotionwireless.net")
+        self.setApplicationName(self.translate("main", "Commotion Client")) #special translation case since we are outside of the main application
+        self.setWindowIcon(QtGui.QIcon(":logo48.png"))
+        self.setApplicationVersion("1.0") #TODO Generate this on build
+        self.status = status
+
+    def init_client(self):
+        """
+        Start up client using current status to determine run_level.
+        """
+        try:
+            if not self.status:
+                self.start_full()
+            elif self.status == "headless":
+                self.start_headless()
+            elif self.status == "daemon":
+                self.start_daemon()
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not fully initialize applicaiton. Application must be halted."))
+            self.log.debug(e, exc_info=1)
+            sys.exit(1)
+
+    def stop_client(self, force_close=None):
+        """
+        Stops all running client processes.
+
+        @param force_close bool Whole application exit if clean close fails. See: close_controller() & close_main_window()
+        """
+        try:
+            self.close_main_window(force_close)
+            self.close_controller(force_close)
+        except Exception as e:
+            if force_close:
+                self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not cleanly close client. Application must be halted."))
+                self.log.debug(e, exc_info=1)
+                sys.exit(1)
+            else:
+                self.log.error(QtCore.QCoreApplication.translate("logs", "Client could not be closed."))
+                self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
+                self.log.debug(e, exc_info=1)
+
+    def restart_client(self, force_close=None):
+        """
+        Restarts the entire client stack according to current application status.
+
+        @param force_close bool Whole application exit if clean close fails. See: close_controller() & close_main_window()
+        """
+        try:
+            self.stop_client(force_close)
+            self.init_client()
+        except Exception as e:
+            if force_close:
+                self.log.error(QtCore.QCoreApplication.translate("logs", "Client could not be restarted. Applicaiton will now be halted"))
+                self.log.debug(e, exc_info=1)
+                sys.exit(1)
+            else:
+                self.log.error(QtCore.QCoreApplication.translate("logs", "Client could not be restarted."))
+                self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
+                self.log.debug(e, exc_info=1)
+                raise
+                
+    def create_main_window(self):
+        """
+        Will create a new main window or return existing main window if one is already created.
+        """
+        if self.main:
+            self.log.debug(QtCore.QCoreApplication.translate("logs", "New window requested when one already exists. Returning existing main window."))
+            self.log.info(QtCore.QCoreApplication.translate("logs", "If you would like to close the main window and re-open it please call close_main_window() first."))
+            return self.main
+        try:
+            _main = MainWindow()
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
+            self.log.debug(e, exc_info=1)
+            raise
+        else:
+            return _main
+
+    def hide_main_window(self, force=None, errors=None):
+        """
+        Attempts to hide the main window without closing the task-bar.
+
+        @param force bool Force window reset if hiding is unsuccessful.
+        @param errors If set to "strict" errors found will be raised before returning the boolean result.
+        @return bool Return True if successful and false is unsuccessful.
+        """
+        try:
+            self.main.exitOnClose = False
+            self.main.close()
+        except Exception as e:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not hide main window. Attempting to close all and only open taskbar."))
+            self.log.debug(e, exc_info=1)
+            if force:
+                pass
+            elif errors == "strict":
+                raise
+            else:
+                return False
+        else:
+            return True
+        #force hide settings
+        try:
+            #if open close
+            if self.main:
+                self.close_main_window()
+            #re-open
+            self.main = MainWindow()
+            self.main.app_message.connect(self.processMessage)
+        except:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could close and re-open the main window."))
+            self.log.debug(e, exc_info=1)
+            if errors == "strict":
+                raise
+            else:
+                return False
+        else:
+            return True
+        return False
+
+    def close_main_window(self, force_close=None):
+        """
+        Closes the main window and task-bar. Only removes the GUI components without closing the application.
+
+        @param force_close bool If the application fails to kill the main window, the whole application should be shut down.
+        @return bool 
+        """
+        try:
+            self.main.remove_on_close = True
+            self.main.close()
+            self.main = False
+        except Exception as e:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close main window."))
+            if force_close:
+                self.log.info(QtCore.QCoreApplication.translate("logs", "force_close activated. Closing application."))
+                try:
+                    self.main.deleteLater()
+                    self.main.exitEvent()
+                except:
+                    self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close main window using its internal mechanisms. Application will be halted."))
+                    self.log.debug(e, exc_info=1)
+                    sys.exit(1)
+            else:
+                self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close main window."))
+                self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
+                self.log.debug(e, exc_info=1)
+                raise
+                
+
+    def create_controller(self):
+        """
+        Creates a controller to act as the middleware between the GUI and the commotion core.
+        """
+        try:
+            pass #replace when controller is ready
+            #self.controller = CommotionController() #TODO Implement controller
+            #self.controller.init() #??????
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create controller. Application must be halted."))
+            self.log.debug(e, exc_info=1)
+            raise
+
+    def close_controller(self, force_close=None):
+        """
+        Closes the controller process.
+
+        @param force_close bool If the application fails to kill the controller, the whole application should be shut down.
+        """
+        try:
+            pass #TODO Swap with below when controller close function is instantiated
+            #if self.controller.close():
+            #    self.controller = None
+        except Exception as e:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close controller."))
+            if force_close:
+                self.log.info(QtCore.QCoreApplication.translate("logs", "force_close activated. Closing application."))
+                try:
+                    del self.controller
+                except:
+                    self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close main window using its internal mechanisms. Application will be halted."))
+                    self.log.debug(e, exc_info=1)
+                    sys.exit(1)
+            else:
+                self.log.error(QtCore.QCoreApplication.translate("logs", "Could not cleanly close controller."))
+                self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
+                self.log.debug(e, exc_info=1)
+                raise
+    
+    def start_full(self):
+        """
+        Start or switch client over to full client.
+        """
+        if self.main == False:
+            try:
+                self.main = MainWindow()
+                self.main.app_message.connect(self.processMessage)
+            except Exception as e:
+                self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
+                self.log.debug(e, exc_info=1)
+                sys.exit(1)
+            else:
+                self.main.show()
+
+    def start_headless(self):
+        """
+        Start or switch client over to headless mode. Headless mode only runs the controller without a taskbar or GUI window.
+        """
+        #Close GUI components if they are on
+        try:
+            if self.main:
+                self.close_main_window()
+        except Exception as e:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close down existing GUI componenets to switch to headless mode."))
+            self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you fully shutdown and restart the application."))
+            self.log.debug(e, exc_info=1)
+            raise
+        #Create controller if not already activated
+        try:
+            if not self.controller:
+                self.controller = create_controller()
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not start in headless mode. Application must be halted."))
+            self.log.debug(e, exc_info=1)
+            raise
+
+    def start_daemon(self):
+        """
+        Start or switch client over to daemon mode. Daemon mode runs the taskbar without showing the main window.
+        """
+        try:
+            #Close main window without closing taskbar
+            if self.main:
+                self.hide_main_window(force=True, errors="strict")
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close down existing GUI componenets to switch to daemon mode."))
+            self.log.debug(e, exc_info=1)
+            raise
+        try:
+            #create main window and controller
+            self.main = create_main_window()
+            self.main.app_message.connect(self.processMessage)
+            if not self.controller:
+                self.controller = create_controller()
+        except Exception as e:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not start daemon. Application must be halted."))
+            self.log.debug(e, exc_info=1)
+            raise
+
+    def processMessage(self, message):
+        """
+        Process which processes messages an app receives and takes actions on valid requests.
+        """
         if message == "showMain":
             if self.main != False:
                 self.main.show()
                 self.main.raise_()
+        elif message == "restart":
+            self.log.info(self.translate("logs", "Received a message to restart. Restarting Now."))
+            self.restart_client(force_close=True) #TODO, might not want strict here post-development
         else:
             self.log.info(self.translate("logs", "message \"{0}\" not a supported type.".format(message)))
 
     def crash(self, message):
+        #TODO Properly handle crash here.
         print(message)
-        self.exit()
-
-        
+        self.exit(1)
         
 
 if __name__ == "__main__":
