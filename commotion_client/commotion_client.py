@@ -291,7 +291,15 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not hide main window. Attempting to close all and only open taskbar."))
             self.log.debug(e, exc_info=1)
             if force:
-                pass
+                try:
+                    self.main.remove_on_close = True
+                    self.main.close()
+                    self.main = None
+                    self.main = create_main_window(self)
+                except Exception as e:
+                    self.log.error(QtCore.QCoreApplication.translate("logs", "Could not force main window restart."))
+                    self.log.debug(e, exc_info=1)
+                    raise
             elif errors == "strict":
                 raise
             else:
