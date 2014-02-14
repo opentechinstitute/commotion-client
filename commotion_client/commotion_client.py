@@ -33,14 +33,14 @@ from GUI.main_window import MainWindow
 
 def get_args():
     #Handle command line arguments
-    argParser = argparse.ArgumentParser(description="Commotion Client")
-    argParser.add_argument("-v", "--verbose", help="Define the verbosity of the Commotion Client.", type=int, choices=range(1, 6))
-    argParser.add_argument("-l", "--logfile", help="Choose a logfile for this instance")
-    argParser.add_argument("-d", "--daemon", action="store_true", help="Start the application in Daemon mode (no UI).")
-    argParser.add_argument("--headless", action="store_true", help="Start the application in full headless mode (no status bar or UI).")
-    argParser.add_argument("-m", "--message", help="Send a message to any existing Commotion Application")
-    argParser.add_argument("-k", "--key", help="Choose a unique application key for this Commotion Instance", type=str)
-    args = argParser.parse_args()
+    arg_parser = argparse.ArgumentParser(description="Commotion Client")
+    arg_parser.add_argument("-v", "--verbose", help="Define the verbosity of the Commotion Client.", type=int, choices=range(1, 6))
+    arg_parser.add_argument("-l", "--logfile", help="Choose a logfile for this instance")
+    arg_parser.add_argument("-d", "--daemon", action="store_true", help="Start the application in Daemon mode (no UI).")
+    arg_parser.add_argument("--headless", action="store_true", help="Start the application in full headless mode (no status bar or UI).")
+    arg_parser.add_argument("-m", "--message", help="Send a message to any existing Commotion Application")
+    arg_parser.add_argument("-k", "--key", help="Choose a unique application key for this Commotion Instance", type=str)
+    args = arg_parser.parse_args()
     parsed_args = {}
     parsed_args['logLevel'] = args.verbose if args.verbose else 2 #TODO getConfig() #actually want to get this from commotion_config
     parsed_args['logFile'] = args.logfile if args.logfile else "temp/logfile.temp" #TODO change the logfile to be grabbed from the commotion config reader
@@ -68,23 +68,23 @@ def main():
 
     #Enable Translations #TODO This code needs to be evaluated to ensure that it is pulling in correct translators
     locale = QtCore.QLocale.system().name()
-    qtTranslator = QtCore.QTranslator()
-    if qtTranslator.load("qt_"+locale, ":/"):
-        app.installTranslator(qtTranslator)
-        appTranslator = QtCore.QTranslator()
-        if appTranslator.load("imagechanger_"+locale, ":/"): #TODO This code needs to be evaluated to ensure that it syncs with any internationalized images
-            app.installTranslator(appTranslator)
+    qt_translator = QtCore.QTranslator()
+    if qt_translator.load("qt_"+locale, ":/"):
+        app.installTranslator(qt_translator)
+        app_translator = QtCore.QTranslator()
+        if app_translator.load("imagechanger_"+locale, ":/"): #TODO This code needs to be evaluated to ensure that it syncs with any internationalized images
+            app.installTranslator(app_translator)
 
     #check for existing application w/wo a message
-    if app.isRunning():
+    if app.is_running():
         if args.message:
             #Checking for custom message
             msg = args.message
-            app.sendMessage(msg)
+            app.send_message(msg)
             log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
         else:
             log.info(app.translate("logs", "application is already running. Application will be brought to foreground"))
-            app.sendMessage("showMain")
+            app.send_message("showMain")
         sys.exit(1)
 
     #initialize client (GUI, controller, etc)
@@ -108,22 +108,22 @@ class SingleApplication(QtGui.QApplication):
         
         #Keep Track of main widgets, so as not to recreate them.
         self.main = False
-        self.statusBar = False
-        self.controlPanel = False
+        self.status_bar = False
+        self.control_panel = False
         #Check for shared memory from other instances and if not created, create them.
         self._key = key
-        self.sharedMemory = QtCore.QSharedMemory(self)
-        self.sharedMemory.setKey(key)
-        if self.sharedMemory.attach():
-            self._isRunning=True
+        self.shared_memory = QtCore.QSharedMemory(self)
+        self.shared_memory.setKey(key)
+        if self.shared_memory.attach():
+            self._is_running=True
         else:
-            self._isRunning=False
-            if not self.sharedMemory.create(1):
+            self._is_running=False
+            if not self.shared_memory.create(1):
                 self.log.info(self.translate("logs", "Application shared memory already exists."))
-                raise RuntimeError(self.sharedMemory.errorString())
+                raise RuntimeError(self.shared_memory.errorString())
                 
-    def isRunning(self):
-        return self._isRunning
+    def is_running(self):
+        return self._is_running
 
 
 class SingleApplicationWithMessaging(SingleApplication):
@@ -141,15 +141,15 @@ class SingleApplicationWithMessaging(SingleApplication):
         self._timeout = 1000
         #create server to listen for messages
         self._server = QtNetwork.QLocalServer(self)
-        #Connect to messageAvailable signal created by handleMessage.
-        self.connect(self, QtCore.SIGNAL('messageAvailable'), self.processMessage)
+        #Connect to messageAvailable signal created by handle_message.
+        self.connect(self, QtCore.SIGNAL('messageAvailable'), self.process_message)
 
-        if not self.isRunning():
+        if not self.is_running():
             bytes.decode
-            self._server.newConnection.connect(self.handleMessage)
+            self._server.newConnection.connect(self.handle_message)
             self._server.listen(self._key)
 
-    def handleMessage(self):
+    def handle_message(self):
         """
         Server side implementation of the messaging functions. This function waits for signals it receives and then emits a SIGNAL "messageAvailable" with the decoded message.
         
@@ -163,11 +163,11 @@ class SingleApplicationWithMessaging(SingleApplication):
         else:
             self.log.error(socket.errorString())
 
-    def sendMessage(self, message):
+    def send_message(self, message):
         """
         Message sending function. Connected to local socket specified by shared key and if successful writes the message to it and returns. 
         """
-        if self.isRunning():
+        if self.is_running():
             socket = QtNetwork.QLocalSocket(self)
             socket.connectToServer(self._key, QtCore.QIODevice.WriteOnly)
             if not socket.waitForConnected(self._timeout):
@@ -182,7 +182,7 @@ class SingleApplicationWithMessaging(SingleApplication):
         self.log.debug(self.translate("logs", "Attempted to send message when commotion client application was not currently running."))
         return False
 
-    def processMessage(self, message):
+    def process_message(self, message):
         """
         Process which processes messages an app receives and takes actions on valid requests.
         """
@@ -313,7 +313,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
                 self.close_main_window()
             #re-open
             self.main = MainWindow()
-            self.main.app_message.connect(self.processMessage)
+            self.main.app_message.connect(self.process_message)
         except:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could close and re-open the main window."))
             self.log.debug(e, exc_info=1)
@@ -400,7 +400,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         if self.main == False:
             try:
                 self.main = MainWindow()
-                self.main.app_message.connect(self.processMessage)
+                self.main.app_message.connect(self.process_message)
             except Exception as e:
                 self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
                 self.log.debug(e, exc_info=1)
@@ -445,7 +445,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         try:
             #create main window and controller
             self.main = create_main_window()
-            self.main.app_message.connect(self.processMessage)
+            self.main.app_message.connect(self.process_message)
             if not self.controller:
                 self.controller = create_controller()
         except Exception as e:
@@ -453,7 +453,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             self.log.debug(e, exc_info=1)
             raise
 
-    def processMessage(self, message):
+    def process_message(self, message):
         """
         Process which processes messages an app receives and takes actions on valid requests.
         """
