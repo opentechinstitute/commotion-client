@@ -122,10 +122,12 @@ class MainWindow(QtGui.QMainWindow):
         """
         Captures the close event for the main window. When called from exitEvent removes a trayIcon and accepts its demise. When called otherwise will simply hide the main window and ignore the event.
         """
+        
         if self.exitOnClose:
             self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a EXIT close event and will shutdown completely."))
             event.accept()
         elif self.remove_on_close:
+            self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a GUI closing close event and will close its main window."))
             self.deleteLater()
             event.accept()
         else:
