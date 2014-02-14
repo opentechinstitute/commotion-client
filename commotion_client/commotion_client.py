@@ -37,17 +37,15 @@ def get_args():
     arg_parser.add_argument("-v", "--verbose", help="Define the verbosity of the Commotion Client.", type=int, choices=range(1, 6))
     arg_parser.add_argument("-l", "--logfile", help="Choose a logfile for this instance")
     arg_parser.add_argument("-d", "--daemon", action="store_true", help="Start the application in Daemon mode (no UI).")
-    arg_parser.add_argument("--headless", action="store_true", help="Start the application in full headless mode (no status bar or UI).")
     arg_parser.add_argument("-m", "--message", help="Send a message to any existing Commotion Application")
     arg_parser.add_argument("-k", "--key", help="Choose a unique application key for this Commotion Instance", type=str)
     args = arg_parser.parse_args()
     parsed_args = {}
+    parsed_args['message'] = args.message if args.message else False 
     parsed_args['logLevel'] = args.verbose if args.verbose else 2 #TODO getConfig() #actually want to get this from commotion_config
     parsed_args['logFile'] = args.logfile if args.logfile else "temp/logfile.temp" #TODO change the logfile to be grabbed from the commotion config reader
     parsed_args['key'] = ['key'] if args.key else "commotionRocks" #TODO the key is PRIME easter-egg fodder
-    parsed_args['status'] = "headless" if args.headless else False
-    #daemon mode turned off if headless is on.
-    parsed_args['status'] = "daemon" if args.daemon and not args.headless else False
+    parsed_args['status'] = "daemon" if args.daemon else False
     return parsed_args
 
 #==================================
@@ -77,9 +75,9 @@ def main():
 
     #check for existing application w/wo a message
     if app.is_running():
-        if args.message:
+        if args['message']:
             #Checking for custom message
-            msg = args.message
+            msg = args['message']
             app.send_message(msg)
             log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
         else:
@@ -161,11 +159,12 @@ class SingleApplicationWithMessaging(SingleApplication):
             socket.disconnectFromServer()
             self.log.debug(self.translate("logs", "message received and emitted in a messageAvailable signal"))
         else:
+            print("socket error")
             self.log.error(socket.errorString())
 
     def send_message(self, message):
         """
-        Message sending function. Connected to local socket specified by shared key and if successful writes the message to it and returns. 
+        Message sending function. Connected to local socket specified by shared key and if successful writes the message to it and returns.
         """
         if self.is_running():
             socket = QtNetwork.QLocalSocket(self)
@@ -203,6 +202,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         self.setWindowIcon(QtGui.QIcon(":logo48.png"))
         self.setApplicationVersion("1.0") #TODO Generate this on build
         self.status = status
+        self.controller = False
+        self.main = False
+
 
     def init_client(self):
         """
@@ -211,8 +213,6 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         try:
             if not self.status:
                 self.start_full()
-            elif self.status == "headless":
-                self.start_headless()
             elif self.status == "daemon":
                 self.start_daemon()
         except Exception as e:
@@ -295,7 +295,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
                     self.main.remove_on_close = True
                     self.main.close()
                     self.main = None
-                    self.main = create_main_window(self)
+                    self.main = self.create_main_window()
                 except Exception as e:
                     self.log.error(QtCore.QCoreApplication.translate("logs", "Could not force main window restart."))
                     self.log.debug(e, exc_info=1)
@@ -408,28 +408,6 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             else:
                 self.main.show()
 
-    def start_headless(self):
-        """
-        Start or switch client over to headless mode. Headless mode only runs the controller without a taskbar or GUI window.
-        """
-        #Close GUI components if they are on
-        try:
-            if self.main:
-                self.close_main_window()
-        except Exception as e:
-            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close down existing GUI componenets to switch to headless mode."))
-            self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you fully shutdown and restart the application."))
-            self.log.debug(e, exc_info=1)
-            raise
-        #Create controller if not already activated
-        try:
-            if not self.controller:
-                self.controller = create_controller()
-        except Exception as e:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not start in headless mode. Application must be halted."))
-            self.log.debug(e, exc_info=1)
-            raise
-
     def start_daemon(self):
         """
         Start or switch client over to daemon mode. Daemon mode runs the taskbar without showing the main window.
@@ -444,10 +422,10 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             raise
         try:
             #create main window and controller
-            self.main = create_main_window()
+            self.main = self.create_main_window()
             self.main.app_message.connect(self.process_message)
-            if not self.controller:
-                self.controller = create_controller()
+            #if not self.controller: #TODO Actually create a stub controller file
+            #    self.controller = create_controller()
         except Exception as e:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not start daemon. Application must be halted."))
             self.log.debug(e, exc_info=1)
