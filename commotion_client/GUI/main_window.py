@@ -124,8 +124,9 @@ class MainWindow(QtGui.QMainWindow):
         """
         if self.exitOnClose:
             self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a EXIT close event and will shutdown completely."))
-            self.tray.trayIcon.hide()
-            del self.tray.trayIcon
+            event.accept()
+        elif self.remove_on_close:
+            self.deleteLater()
             event.accept()
         else:
             self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a non-exit close event and will hide its main window."))
