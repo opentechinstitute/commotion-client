@@ -27,7 +27,7 @@ from PyQt4 import QtNetwork
 from assets import commotion_assets_rc
 from utils import logger
 from GUI.main_window import MainWindow
-#from commotion_controller import CommotionController #TODO Create Controller
+#from controller import CommotionController #TODO Create Controller
 
 
 
@@ -42,12 +42,12 @@ def get_args():
     argParser.add_argument("-k", "--key", help="Choose a unique application key for this Commotion Instance", type=str)
     args = argParser.parse_args()
     parsed_args = {}
-    parsed_args['logLevel'] = args['verbose'] if ("verbose" in args) else 2 #TODO getConfig() #actually want to get this from commotion_config
-    parsed_args['logFile'] = args['logfile'] if ("logfile" in args) else "temp/logfile.temp" #TODO change the logfile to be grabbed from the commotion config reader
-    parsed_args['key'] = ['key'] if ("key" in args) else "commotionRocks" #TODO the key is PRIME easter-egg fodder
-    parsed_args['status'] = "headless" if ("headless" in args) else False
+    parsed_args['logLevel'] = args.verbose if args.verbose else 2 #TODO getConfig() #actually want to get this from commotion_config
+    parsed_args['logFile'] = args.logfile if args.logfile else "temp/logfile.temp" #TODO change the logfile to be grabbed from the commotion config reader
+    parsed_args['key'] = ['key'] if args.key else "commotionRocks" #TODO the key is PRIME easter-egg fodder
+    parsed_args['status'] = "headless" if args.headless else False
     #daemon mode turned off if headless is on.
-    parsed_args['status'] = "daemon" if ("daemon" and not "headless" in args) else False
+    parsed_args['status'] = "daemon" if args.daemon and not args.headless else False
     return parsed_args
 
 #==================================
