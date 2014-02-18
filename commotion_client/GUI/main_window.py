@@ -57,6 +57,8 @@ class MainWindow(QtGui.QMainWindow):
 
         #set main menu to not close application on exit events
         self.exitOnClose = False
+        self.remove_on_close = False
+
 
 
         #Set up Main Viewport
