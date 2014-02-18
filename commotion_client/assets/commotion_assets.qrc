@@ -12,5 +12,7 @@
   <file alias="alert32.png">images/alert32.png</file>
   <file alias="alert48.png">images/alert48.png</file>
   <file alias="alert62.png">images/alert62.png</file>
+  <!--Loading Animation -->
+  <file alias="loading62.png">images/loading62.gif</file>
 </qresource>
 </RCC>
