@@ -25,7 +25,8 @@ from PyQt4 import QtCore
 from PyQt4 import QtNetwork
 
 from utils import logger
-from GUI.main_window import MainWindow
+from GUI import main_window
+from GUI import restart_window
 #from controller import CommotionController #TODO Create Controller
 
 
@@ -253,6 +254,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
 
         @param force_close bool Whole application exit if clean close fails. See: close_controller() & close_main_window()
         """
+        _restart = restart_window.RestartWindow()
         try:
             self.stop_client(force_close)
             self.init_client()
@@ -266,7 +268,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
                 self.log.debug(_excp, exc_info=1)
                 raise
-                
+        _restart.close()
+
+
     def create_main_window(self):
         """
         Will create a new main window or return existing main window if one is already created.
@@ -276,7 +280,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             self.log.info(QtCore.QCoreApplication.translate("logs", "If you would like to close the main window and re-open it please call close_main_window() first."))
             return self.main
         try:
-            _main = MainWindow()
+            _main = main_window.MainWindow()
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
             self.log.debug(_excp, exc_info=1)
@@ -320,7 +324,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             if self.main:
                 self.close_main_window()
             #re-open
-            self.main = MainWindow()
+            self.main = main_window.MainWindow()
             self.main.app_message.connect(self.process_message)
         except:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could close and re-open the main window."))
@@ -407,7 +411,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         """
         if self.main == False:
             try:
-                self.main = MainWindow()
+                self.main = main_window.MainWindow()
                 self.main.app_message.connect(self.process_message)
             except Exception as _excp:
                 self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
