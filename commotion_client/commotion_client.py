@@ -25,10 +25,12 @@ from PyQt4 import QtCore
 from PyQt4 import QtNetwork
 
 from utils import logger
+from utils import thread
 from GUI import main_window
 from GUI import restart_window
 #from controller import CommotionController #TODO Create Controller
 
+import time
 
 
 def get_args():
@@ -100,6 +102,24 @@ def main():
     sys.exit(app.exec_())
     log.debug(app.translate("logs", "Shutting down"))
 
+
+class HoldStateDuringRestart(thread.GenericThread):
+    """
+    A thread that will run during the restart of all other components to keep the applicaiton alive.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.restart_complete = None
+
+    def run(self):
+        self.log.debug(QtCore.QCoreApplication.translate("logs","Runnign restart thread"))
+        while True:
+            time.sleep(0.3)
+            if self.restart_complete:
+                self.log.debug(QtCore.QCoreApplication.translate("logs","Restart event identified. Thread quitting"))
+                break
+        self.exit()
 
     
 class SingleApplication(QtGui.QApplication):
@@ -201,6 +221,8 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
     """
     The final layer of the class onion that is the Commotion client. This class includes functions to enable the sub-processes and modules of the Commotion Client (GUI's and controllers). 
     """
+
+    restarted = QtCore.pyqtSignal()
     
     def __init__(self, key, status, argv):
         super().__init__(key, argv)
@@ -254,7 +276,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
 
         @param force_close bool Whole application exit if clean close fails. See: close_controller() & close_main_window()
         """
-        _restart = restart_window.RestartWindow()
+        #hold applicaiton state while restarting all other components.
+        _restart = HoldStateDuringRestart()
+        _restart.start()
         try:
             self.stop_client(force_close)
             self.init_client()
@@ -268,8 +292,8 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
                 self.log.debug(_excp, exc_info=1)
                 raise
-        _restart.close()
-
+        _restart.restart_complete = True
+                
 
     def create_main_window(self):
         """
