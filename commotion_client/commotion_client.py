@@ -20,11 +20,10 @@ import sys
 import argparse
 import logging
 
-from PyQt4 import QtCore
 from PyQt4 import QtGui
+from PyQt4 import QtCore
 from PyQt4 import QtNetwork
 
-from assets import commotion_assets_rc
 from utils import logger
 from GUI.main_window import MainWindow
 #from controller import CommotionController #TODO Create Controller
@@ -34,16 +33,25 @@ from GUI.main_window import MainWindow
 def get_args():
     #Handle command line arguments
     arg_parser = argparse.ArgumentParser(description="Commotion Client")
-    arg_parser.add_argument("-v", "--verbose", help="Define the verbosity of the Commotion Client.", type=int, choices=range(1, 6))
-    arg_parser.add_argument("-l", "--logfile", help="Choose a logfile for this instance")
-    arg_parser.add_argument("-d", "--daemon", action="store_true", help="Start the application in Daemon mode (no UI).")
-    arg_parser.add_argument("-m", "--message", help="Send a message to any existing Commotion Application")
-    arg_parser.add_argument("-k", "--key", help="Choose a unique application key for this Commotion Instance", type=str)
+    arg_parser.add_argument("-v", "--verbose",
+                            help="Define the verbosity of the Commotion Client.",
+                            type=int, choices=range(1, 6))
+    arg_parser.add_argument("-l", "--logfile",
+                            help="Choose a logfile for this instance")
+    arg_parser.add_argument("-d", "--daemon", action="store_true",
+                            help="Start the application in Daemon mode (no UI).")
+    arg_parser.add_argument("-m", "--message",
+                            help="Send a message to any existing Commotion Application")
+    arg_parser.add_argument("-k", "--key",
+                            help="Choose a unique application key for this Commotion Instance",
+                            type=str)
     args = arg_parser.parse_args()
     parsed_args = {}
-    parsed_args['message'] = args.message if args.message else False 
-    parsed_args['logLevel'] = args.verbose if args.verbose else 2 #TODO getConfig() #actually want to get this from commotion_config
-    parsed_args['logFile'] = args.logfile if args.logfile else "temp/logfile.temp" #TODO change the logfile to be grabbed from the commotion config reader
+    parsed_args['message'] = args.message if args.message else False
+    #TODO getConfig() #actually want to get this from commotion_config
+    parsed_args['logLevel'] = args.verbose if args.verbose else 2
+    #TODO change the logfile to be grabbed from the commotion config reader
+    parsed_args['logFile'] = args.logfile if args.logfile else "temp/logfile.temp" 
     parsed_args['key'] = ['key'] if args.key else "commotionRocks" #TODO the key is PRIME easter-egg fodder
     parsed_args['status'] = "daemon" if args.daemon else False
     return parsed_args
@@ -113,9 +121,9 @@ class SingleApplication(QtGui.QApplication):
         self.shared_memory = QtCore.QSharedMemory(self)
         self.shared_memory.setKey(key)
         if self.shared_memory.attach():
-            self._is_running=True
+            self._is_running = True
         else:
-            self._is_running=False
+            self._is_running = False
             if not self.shared_memory.create(1):
                 self.log.info(self.translate("logs", "Application shared memory already exists."))
                 raise RuntimeError(self.shared_memory.errorString())
@@ -215,9 +223,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
                 self.start_full()
             elif self.status == "daemon":
                 self.start_daemon()
-        except Exception as e:
+        except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not fully initialize applicaiton. Application must be halted."))
-            self.log.debug(e, exc_info=1)
+            self.log.debug(_excp, exc_info=1)
             sys.exit(1)
 
     def stop_client(self, force_close=None):
@@ -229,15 +237,15 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         try:
             self.close_main_window(force_close)
             self.close_controller(force_close)
-        except Exception as e:
+        except Exception as _excp:
             if force_close:
                 self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not cleanly close client. Application must be halted."))
-                self.log.debug(e, exc_info=1)
+                self.log.debug(_excp, exc_info=1)
                 sys.exit(1)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Client could not be closed."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
-                self.log.debug(e, exc_info=1)
+                self.log.debug(_excp, exc_info=1)
 
     def restart_client(self, force_close=None):
         """
@@ -248,15 +256,15 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         try:
             self.stop_client(force_close)
             self.init_client()
-        except Exception as e:
+        except Exception as _excp:
             if force_close:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Client could not be restarted. Applicaiton will now be halted"))
-                self.log.debug(e, exc_info=1)
+                self.log.debug(_excp, exc_info=1)
                 sys.exit(1)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Client could not be restarted."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
-                self.log.debug(e, exc_info=1)
+                self.log.debug(_excp, exc_info=1)
                 raise
                 
     def create_main_window(self):
@@ -269,9 +277,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             return self.main
         try:
             _main = MainWindow()
-        except Exception as e:
+        except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
-            self.log.debug(e, exc_info=1)
+            self.log.debug(_excp, exc_info=1)
             raise
         else:
             return _main
@@ -287,18 +295,18 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         try:
             self.main.exitOnClose = False
             self.main.close()
-        except Exception as e:
+        except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not hide main window. Attempting to close all and only open taskbar."))
-            self.log.debug(e, exc_info=1)
+            self.log.debug(_excp, exc_info=1)
             if force:
                 try:
                     self.main.remove_on_close = True
                     self.main.close()
                     self.main = None
                     self.main = self.create_main_window()
-                except Exception as e:
+                except Exception as _excp:
                     self.log.error(QtCore.QCoreApplication.translate("logs", "Could not force main window restart."))
-                    self.log.debug(e, exc_info=1)
+                    self.log.debug(_excp, exc_info=1)
                     raise
             elif errors == "strict":
                 raise
@@ -316,7 +324,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             self.main.app_message.connect(self.process_message)
         except:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could close and re-open the main window."))
-            self.log.debug(e, exc_info=1)
+            self.log.debug(_excp, exc_info=1)
             if errors == "strict":
                 raise
             else:
@@ -336,7 +344,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             self.main.remove_on_close = True
             self.main.close()
             self.main = False
-        except Exception as e:
+        except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close main window."))
             if force_close:
                 self.log.info(QtCore.QCoreApplication.translate("logs", "force_close activated. Closing application."))
@@ -345,12 +353,12 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
                     self.main.exitEvent()
                 except:
                     self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close main window using its internal mechanisms. Application will be halted."))
-                    self.log.debug(e, exc_info=1)
+                    self.log.debug(_excp, exc_info=1)
                     sys.exit(1)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close main window."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
-                self.log.debug(e, exc_info=1)
+                self.log.debug(_excp, exc_info=1)
                 raise
                 
 
@@ -362,9 +370,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             pass #replace when controller is ready
             #self.controller = CommotionController() #TODO Implement controller
             #self.controller.init() #??????
-        except Exception as e:
+        except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create controller. Application must be halted."))
-            self.log.debug(e, exc_info=1)
+            self.log.debug(_excp, exc_info=1)
             raise
 
     def close_controller(self, force_close=None):
@@ -377,7 +385,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             pass #TODO Swap with below when controller close function is instantiated
             #if self.controller.close():
             #    self.controller = None
-        except Exception as e:
+        except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close controller."))
             if force_close:
                 self.log.info(QtCore.QCoreApplication.translate("logs", "force_close activated. Closing application."))
@@ -385,12 +393,12 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
                     del self.controller
                 except:
                     self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close main window using its internal mechanisms. Application will be halted."))
-                    self.log.debug(e, exc_info=1)
+                    self.log.debug(_excp, exc_info=1)
                     sys.exit(1)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Could not cleanly close controller."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
-                self.log.debug(e, exc_info=1)
+                self.log.debug(_excp, exc_info=1)
                 raise
     
     def start_full(self):
@@ -401,9 +409,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             try:
                 self.main = MainWindow()
                 self.main.app_message.connect(self.process_message)
-            except Exception as e:
+            except Exception as _excp:
                 self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
-                self.log.debug(e, exc_info=1)
+                self.log.debug(_excp, exc_info=1)
                 sys.exit(1)
             else:
                 self.main.show()
@@ -416,9 +424,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             #Close main window without closing taskbar
             if self.main:
                 self.hide_main_window(force=True, errors="strict")
-        except Exception as e:
+        except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close down existing GUI componenets to switch to daemon mode."))
-            self.log.debug(e, exc_info=1)
+            self.log.debug(_excp, exc_info=1)
             raise
         try:
             #create main window and controller
@@ -426,9 +434,9 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             self.main.app_message.connect(self.process_message)
             #if not self.controller: #TODO Actually create a stub controller file
             #    self.controller = create_controller()
-        except Exception as e:
+        except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not start daemon. Application must be halted."))
-            self.log.debug(e, exc_info=1)
+            self.log.debug(_excp, exc_info=1)
             raise
 
     def process_message(self, message):
