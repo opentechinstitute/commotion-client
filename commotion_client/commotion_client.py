@@ -189,7 +189,6 @@ class SingleApplicationWithMessaging(SingleApplication):
             socket.disconnectFromServer()
             self.log.debug(self.translate("logs", "message received and emitted in a messageAvailable signal"))
         else:
-            print("socket error")
             self.log.error(socket.errorString())
 
     def send_message(self, message):
@@ -450,18 +449,28 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         """
         System Tray initializer that runs all processes required to connect the system tray to other application commponents
         """
-        if self.main:
-            self.sys_tray.exit.triggered.connect(self.main.exitEvent)
-            self.sys_tray.show_main.connect(self.main.bring_front)
-
+        try:
+            if self.main:
+                self.sys_tray.exit.triggered.connect(self.main.exitEvent)
+                self.sys_tray.show_main.connect(self.main.bring_front)
+        except Exception as _excp:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not initialize connections between the system tray and other application components."))
+            self.log.debug(_excp, exc_info=1)
+            raise
 
 
     def start_sys_tray(self):
         """
         Starts the system tray
         """
-        _tray = system_tray.TrayIcon()
-        return _tray
+        try: 
+            tray = system_tray.TrayIcon()
+        except Exception as _excp:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not start system tray."))
+            self.log.debug(_excp, exc_info=1)
+            raise
+        else:
+            return tray
 
     def init_main(self):
         """
@@ -482,7 +491,6 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not show the main window."))
             self.log.debug(_excp, exc_info=1)
             raise
-
 
     def init_controller(self):
         pass
@@ -528,7 +536,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
 
     def crash(self, message):
         #TODO Properly handle crash here.
-        print(message)
+        self.log.info(message)
         self.exit(1)
         
 
