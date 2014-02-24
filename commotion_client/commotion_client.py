@@ -447,9 +447,13 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
                 self.init_menu()
 
     def init_sys_tray(self):
+        """
+        System Tray initializer that runs all processes required to connect the system tray to other application commponents
+        """
         if self.main:
-            self.main.connect(self.sys_tray.exit, QtCore.SIGNAL("triggered()"), self.main.exitEvent)
-            self.main.connect(self.sys_tray, QtCore.SIGNAL("showMainWindow"), self.main.bringFront)
+            self.sys_tray.exit.triggered.connect(self.main.exitEvent)
+            self.sys_tray.show_main.connect(self.main.bring_front)
+
 
 
     def start_sys_tray(self):
@@ -465,9 +469,17 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         """
         try:
             self.main.app_message.connect(self.process_message)
+            if self.sys_tray:
+                self.sys_tray.exit.triggered.connect(self.main.exitEvent)
+                self.sys_tray.show_main.connect(self.main.bring_front)
+        except Exception as _excp:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not initialize connections between the main window and other application components."))
+            self.log.debug(_excp, exc_info=1)
+            raise
+        try:
             self.main.show()
         except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not initialize the main window."))
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not show the main window."))
             self.log.debug(_excp, exc_info=1)
             raise
 
