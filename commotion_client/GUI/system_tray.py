@@ -16,11 +16,9 @@ class TrayIcon(QtGui.QWidget):
     
     def __init__(self, parent=None):
         super().__init__()
-
         self.log = logging.getLogger("commotion_client."+__name__) #TODO stop hard_coding commotion_ client
         #Create actions for tray menu
         self.exit = QtGui.QAction(QtGui.QIcon(), "Exit", self)
-
         #set tray Icon and it's menu which allows closing from it.
         self.tray_icon = QtGui.QSystemTrayIcon(QtGui.QIcon(":logo32.png"), self)
         menu = QtGui.QMenu(self)

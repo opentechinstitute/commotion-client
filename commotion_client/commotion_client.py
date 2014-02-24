@@ -27,8 +27,8 @@ from PyQt4 import QtNetwork
 from utils import logger
 from utils import thread
 from GUI import main_window
-from GUI import restart_window
 from GUI import system_tray
+
 #from controller import CommotionController #TODO Create Controller
 
 import time
@@ -235,6 +235,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         self.status = status
         self.controller = False
         self.main = False
+        self.sys_tray = False
 
 
     def init_client(self):
@@ -435,15 +436,45 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         """
         if not self.main:
             try:
-                self.main = create_main_window()
-                self.sys_tray = system_tray.TrayIcon()
+                self.main = self.create_main_window()
             except Exception as _excp:
                 self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
                 self.log.debug(_excp, exc_info=1)
                 sys.exit(1)
             else:
+                self.init_main()
+            try:
+                self.sys_tray = self.create_sys_tray()
+            except Exception as _excp:
+                self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create system tray. Application must be halted."))
+                self.log.debug(_excp, exc_info=1)
+                sys.exit(1)
+            else:
                 self.init_sys_tray()
-                self.init_menu()
+
+    def start_daemon(self):
+        """
+        Start or switch client over to daemon mode. Daemon mode runs the taskbar without showing the main window.
+        """
+        try:
+            #Close main window without closing taskbar and system tray
+            if self.main:
+                self.hide_main_window(force=True, errors="strict")
+        except Exception as _excp:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close down existing GUI componenets to switch to daemon mode."))
+            self.log.debug(_excp, exc_info=1)
+            raise
+        try:
+            #create controller and sys tray
+            self.sys_tray = self.create_sys_tray()
+            #if not self.controller: #TODO Actually create a stub controller file
+            #    self.controller = create_controller()
+        except Exception as _excp:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not start daemon. Application must be halted."))
+            self.log.debug(_excp, exc_info=1)
+            raise
+        else:
+            self.init_sys_tray()
 
     def init_sys_tray(self):
         """
@@ -459,7 +490,7 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
             raise
 
 
-    def start_sys_tray(self):
+    def create_sys_tray(self):
         """
         Starts the system tray
         """
@@ -495,31 +526,6 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
     def init_controller(self):
         pass
 
-    
-    def start_daemon(self):
-        """
-        Start or switch client over to daemon mode. Daemon mode runs the taskbar without showing the main window.
-        """
-        try:
-            #Close main window without closing taskbar and system tray
-            if self.main:
-                self.hide_main_window(force=True, errors="strict")
-        except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close down existing GUI componenets to switch to daemon mode."))
-            self.log.debug(_excp, exc_info=1)
-            raise
-        try:
-            #create controller and sys tray
-            self.sys_tray = self.start_sys_tray()
-            #if not self.controller: #TODO Actually create a stub controller file
-            #    self.controller = create_controller()
-        except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not start daemon. Application must be halted."))
-            self.log.debug(_excp, exc_info=1)
-            raise
-        else:
-            self.init_sys_tray()
-
     def process_message(self, message):
         """
         Process which processes messages an app receives and takes actions on valid requests.
@@ -538,7 +544,6 @@ class CommotionClientApplication(SingleApplicationWithMessaging):
         #TODO Properly handle crash here.
         self.log.info(message)
         self.exit(1)
-        
 
 if __name__ == "__main__":
     main()
