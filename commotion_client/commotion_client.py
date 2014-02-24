@@ -97,7 +97,7 @@ def main():
 
     #initialize client (GUI, controller, etc)
     app.init_client()
-        
+
     sys.exit(app.exec_())
     log.debug(app.translate("logs", "Shutting down"))
 
@@ -163,6 +163,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         """
         try:
             self.close_main_window(force_close)
+            self.close_sys_tray(force_close)
             self.close_controller(force_close)
         except Exception as _excp:
             if force_close:
@@ -197,7 +198,6 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.log.debug(_excp, exc_info=1)
                 raise
         _restart.restart_complete = True
-                
 
     def create_main_window(self):
         """
@@ -404,6 +404,35 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             raise
         else:
             return tray
+
+
+    def close_sys_tray(self, force_close=None):
+        """
+        Closes the system tray. Only removes the GUI components without closing the application.
+
+        @param force_close bool If the application fails to kill the main window, the whole application should be shut down.
+        @return bool 
+        """
+        try:
+            self.sys_tray.close()
+            self.sys_tray = False
+        except Exception as _excp:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close system tray."))
+            if force_close:
+                self.log.info(QtCore.QCoreApplication.translate("logs", "force_close activated. Closing application."))
+                try:
+                    self.sys_tray.deleteLater()
+                    self.sys_tray.close()
+                except:
+                    self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close system tray using its internal mechanisms. Application will be halted."))
+                    self.log.debug(_excp, exc_info=1)
+                    sys.exit(1)
+            else:
+                self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close system tray."))
+                self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
+                self.log.debug(_excp, exc_info=1)
+                raise
+
 
     def init_main(self):
         """
