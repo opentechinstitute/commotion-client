@@ -142,7 +142,7 @@ class MainWindow(QtGui.QMainWindow):
         self.exitOnClose = True
         self.close()
 
-    def bringFront(self):
+    def bring_front(self):
         """
         Brings the main window to the front of the screen.
         """

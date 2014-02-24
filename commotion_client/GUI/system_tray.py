@@ -12,7 +12,8 @@ class TrayIcon(QtGui.QWidget):
     """
     The Commotion tray icon. This icon object is the only object that can close the entire application.
     """
-
+    show_main = QtCore.pyqtSignal()
+    
     def __init__(self, parent=None):
         super().__init__()
 
@@ -35,4 +36,4 @@ class TrayIcon(QtGui.QWidget):
         if reason == QtGui.QSystemTrayIcon.Context:
             self.tray_icon.contextMenu().show()
         elif reason == QtGui.QSystemTrayIcon.Trigger:
-            self.emit(QtCore.SIGNAL("showMainWindow"))
+            self.show_main.emit()
