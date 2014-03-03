@@ -202,6 +202,10 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 raise
         _restart.end()
 
+#=================================================
+#                 MAIN WINDOW
+#=================================================
+        
     def create_main_window(self):
         """
         Will create a new main window or return existing main window if one is already created.
@@ -219,6 +223,26 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         else:
             return _main
 
+    def init_main(self):
+        """
+        Main window initializer that shows and connects the main window's messaging function to the app message processor.
+        """
+        try:
+            self.main.app_message.connect(self.process_message)
+            if self.sys_tray:
+                self.sys_tray.exit.triggered.connect(self.main.exitEvent)
+                self.sys_tray.show_main.connect(self.main.bring_front)
+        except Exception as _excp:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not initialize connections between the main window and other application components."))
+            self.log.debug(_excp, exc_info=1)
+            raise
+        try:
+            self.main.show()
+        except Exception as _excp:
+            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not show the main window."))
+            self.log.debug(_excp, exc_info=1)
+            raise
+
     def hide_main_window(self, force=None, errors=None):
         """
         Attempts to hide the main window without closing the task-bar.
@@ -228,15 +252,13 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         @return bool Return True if successful and false is unsuccessful.
         """
         try:
-            self.main.exitOnClose = False
-            self.main.close()
+            self.main.exit()
         except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not hide main window. Attempting to close all and only open taskbar."))
             self.log.debug(_excp, exc_info=1)
             if force:
                 try:
-                    self.main.remove_on_close = True
-                    self.main.close()
+                    self.main.purge()
                     self.main = None
                     self.main = self.create_main_window()
                 except Exception as _excp:
@@ -251,7 +273,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             return True
         #force hide settings
         try:
-            #if open close
+            #if already open, then close first
             if self.main:
                 self.close_main_window()
             #re-open
@@ -273,11 +295,10 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         Closes the main window and task-bar. Only removes the GUI components without closing the application.
 
         @param force_close bool If the application fails to kill the main window, the whole application should be shut down.
-        @return bool 
+        @return bool
         """
         try:
-            self.main.remove_on_close = True
-            self.main.close()
+            self.main.purge
             self.main = False
         except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close main window."))
@@ -285,7 +306,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.log.info(QtCore.QCoreApplication.translate("logs", "force_close activated. Closing application."))
                 try:
                     self.main.deleteLater()
-                    self.main.exitEvent()
+                    self.main = False
                 except Exception as _excp:
                     _catch_all = QtCore.QCoreApplication.translate("logs", "Could not close main window using its internal mechanisms. Application will be halted.")
                     self.log.critical(_catch_all)
@@ -296,6 +317,10 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
                 self.log.debug(_excp, exc_info=1)
                 raise
+
+#=================================================
+#                 CONTROLLER
+#=================================================
 
     def create_controller(self):
         """
@@ -309,6 +334,9 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create controller. Application must be halted."))
             self.log.debug(_excp, exc_info=1)
             raise
+
+    def init_controller(self):
+        pass
 
     def close_controller(self, force_close=None):
         """
@@ -385,6 +413,10 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         else:
             self.init_sys_tray()
 
+#=================================================
+#                 SYSTEM TRAY
+#=================================================
+            
     def init_sys_tray(self):
         """
         System Tray initializer that runs all processes required to connect the system tray to other application commponents
@@ -439,29 +471,6 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.log.debug(_excp, exc_info=1)
                 raise
 
-
-    def init_main(self):
-        """
-        Main window initializer that shows and connects the main window's messaging function to the app message processor.
-        """
-        try:
-            self.main.app_message.connect(self.process_message)
-            if self.sys_tray:
-                self.sys_tray.exit.triggered.connect(self.main.exitEvent)
-                self.sys_tray.show_main.connect(self.main.bring_front)
-        except Exception as _excp:
-            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not initialize connections between the main window and other application components."))
-            self.log.debug(_excp, exc_info=1)
-            raise
-        try:
-            self.main.show()
-        except Exception as _excp:
-            self.log.error(QtCore.QCoreApplication.translate("logs", "Could not show the main window."))
-            self.log.debug(_excp, exc_info=1)
-            raise
-
-    def init_controller(self):
-        pass
 
     def process_message(self, message):
         """
