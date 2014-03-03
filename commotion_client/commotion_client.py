@@ -31,7 +31,6 @@ from GUI import system_tray
 
 import time
 
-
 def get_args():
     #Handle command line arguments
     arg_parser = argparse.ArgumentParser(description="Commotion Client")
@@ -101,7 +100,6 @@ def main():
     sys.exit(app.exec_())
     log.debug(app.translate("logs", "Shutting down"))
 
-
 class HoldStateDuringRestart(thread.GenericThread):
     """
     A thread that will run during the restart of all other components to keep the applicaiton alive.
@@ -139,7 +137,6 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         self.controller = False
         self.main = False
         self.sys_tray = False
-
 
     def init_client(self):
         """
@@ -292,7 +289,6 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
                 self.log.debug(_excp, exc_info=1)
                 raise
-                
 
     def create_controller(self):
         """
@@ -332,7 +328,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
                 self.log.debug(_excp, exc_info=1)
                 raise
-    
+
     def start_full(self):
         """
         Start or switch client over to full client.
@@ -396,7 +392,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         """
         Starts the system tray
         """
-        try: 
+        try:
             tray = system_tray.TrayIcon()
         except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not start system tray."))
@@ -404,7 +400,6 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             raise
         else:
             return tray
-
 
     def close_sys_tray(self, force_close=None):
         """
