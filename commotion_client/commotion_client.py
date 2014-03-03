@@ -481,7 +481,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         @param message string optional exit message to print to standard error on application close. This will FORCE the application to close in an unclean way.
         """
         if message:
-            sys.exit(message)
+            self.exit(message)
         else:
             self.quit()
 
