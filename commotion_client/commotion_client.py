@@ -109,6 +109,9 @@ class HoldStateDuringRestart(thread.GenericThread):
         super().__init__()
         self.restart_complete = None
 
+    def end(self):
+        self.restart_complete = True
+
     def run(self):
         self.log.debug(QtCore.QCoreApplication.translate("logs", "Running restart thread"))
         while True:
@@ -197,7 +200,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
                 self.log.debug(_excp, exc_info=1)
                 raise
-        _restart.restart_complete = True
+        _restart.end()
 
     def create_main_window(self):
         """
