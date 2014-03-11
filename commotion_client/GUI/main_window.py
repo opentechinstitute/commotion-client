@@ -23,6 +23,7 @@ from assets import commotion_assets_rc
 from GUI.menu_bar import MenuBar
 from GUI.crash_report import CrashReport
 
+
 class MainWindow(QtGui.QMainWindow):
     """
     The central widget for the commotion client. This widget initalizes all other sub-widgets and extensions as well as defines the paramiters of the main GUI container.
@@ -57,6 +58,8 @@ class MainWindow(QtGui.QMainWindow):
 
         #set main menu to not close application on exit events
         self.exitOnClose = False
+        self.remove_on_close = False
+
 
 
         #Set up Main Viewport
@@ -98,13 +101,6 @@ class MainWindow(QtGui.QMainWindow):
         #Create slot to monitor when menu-bar wants the main window to change the main-viewport
         self.connect(self.menu_bar, QtCore.SIGNAL("viewportRequested()"), self.changeViewport)
         
-        #Create tray
-        self.tray = TrayIcon(self)
-        #connect to tray events for closing application and showing main window.
-        self.connect(self.tray.exit, QtCore.SIGNAL("triggered()"), self.exitEvent)
-        self.connect(self.tray, QtCore.SIGNAL("showMainWindow"), self.bringFront)
-        #crash("YOU NEED TO IMPLEMENT THE CRASHING FUNCTIONALITY HERE")
-
     def toggle_menu_bar(self):
         #if menu shown... then
         #DockToHide = self.findChild(name="MenuBarDock")
@@ -117,6 +113,15 @@ class MainWindow(QtGui.QMainWindow):
     def changeViewport(self, viewport):
         self.log.debug(QtCore.QCoreApplication.translate("logs", "Request to change viewport received."))
         self.viewport.setViewport(viewport)
+
+    def purge(self):
+        """
+        Closes the menu and sets its data up for immediate removal.
+        """
+        self.cleanup()
+        self.main.remove_on_close = True
+        self.close()
+
 
     def closeEvent(self, event):
         """
@@ -140,13 +145,17 @@ class MainWindow(QtGui.QMainWindow):
         """
         Closes and exits the entire commotion program.
         """
-        self.closing.emit() #send signal for others to clean up if they need to
-        if self.dirty:
-            self.save_settings()
+        self.cleanup()
         self.exitOnClose = True
         self.close()
 
-    def bringFront(self):
+    def cleanup(self):
+        self.closing.emit() #send signal for others to clean up if they need to
+        if self.dirty:
+            self.save_settings()
+
+
+    def bring_front(self):
         """
         Brings the main window to the front of the screen.
         """
@@ -207,31 +216,3 @@ class MainWindow(QtGui.QMainWindow):
             self.exitOnClose = True
             self.close()
         
-
-class TrayIcon(QtGui.QWidget):
-    """
-    The Commotion tray icon. This icon object is the only object that can close the entire application.
-    """
-
-    def __init__(self, parent=None):
-        super().__init__()
-        
-        #Create actions for tray menu
-        self.exit = QtGui.QAction(QtGui.QIcon(), "Exit", self)
-
-        #set tray Icon and it's menu which allows closing from it.
-        self.tray_icon = QtGui.QSystemTrayIcon(QtGui.QIcon(":logo32.png"), self)
-        menu = QtGui.QMenu(self)
-        menu.addAction(self.exit) #add exit action to tray icon
-        self.tray_icon.setContextMenu(menu)
-        self.tray_icon.activated.connect(self.tray_iconActivated)
-        self.tray_icon.show()
-
-    def tray_iconActivated(self, reason):
-        """
-        Defines the tray icon behavior on different types of interactions.
-        """
-        if reason == QtGui.QSystemTrayIcon.Context:
-            self.tray_icon.contextMenu().show()
-        elif reason == QtGui.QSystemTrayIcon.Trigger:
-            self.emit(QtCore.SIGNAL("showMainWindow"))

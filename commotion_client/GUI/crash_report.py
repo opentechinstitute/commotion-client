@@ -23,7 +23,7 @@ import uuid
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-from GUI import Ui_crash_report_window
+from GUI.ui import Ui_crash_report_window
 
 class CrashReport(Ui_crash_report_window.crash_window):
 
