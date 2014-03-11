@@ -1,16 +1,24 @@
+# Debian .deb cruft
 debian/files
 debian/commotion-linux-py.debhelper.log
 debian/commotion-linux-py.substvars
 debian/commotion-linux-py.postinst.debhelper
 debian/commotion-linux-py.prerm.debhelper
 debian/commotion-linux-py/
+
 # python build products
 *.pyc
 __pycache__
+
 # example code
 examples/
+
 # PyQt auto-created asset tracking file.
 *_rc.py
 commotion_client/temp/
+
 #All compiled versions of designer created UI files.
 Ui_*.py
+
+# Emacs auto-save cruft because s2e does not want to spend the time debugging his .emacs config right now.
+\#.*#
