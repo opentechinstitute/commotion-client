@@ -114,6 +114,15 @@ class MainWindow(QtGui.QMainWindow):
         self.log.debug(QtCore.QCoreApplication.translate("logs", "Request to change viewport received."))
         self.viewport.setViewport(viewport)
 
+    def purge(self):
+        """
+        Closes the menu and sets its data up for immediate removal.
+        """
+        self.cleanup()
+        self.main.remove_on_close = True
+        self.close()
+
+
     def closeEvent(self, event):
         """
         Captures the close event for the main window. When called from exitEvent removes a trayIcon and accepts its demise. When called otherwise will simply hide the main window and ignore the event.
@@ -136,11 +145,15 @@ class MainWindow(QtGui.QMainWindow):
         """
         Closes and exits the entire commotion program.
         """
+        self.cleanup()
+        self.exitOnClose = True
+        self.close()
+
+    def cleanup(self):
         self.closing.emit() #send signal for others to clean up if they need to
         if self.dirty:
             self.save_settings()
-        self.exitOnClose = True
-        self.close()
+
 
     def bring_front(self):
         """
