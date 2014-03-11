@@ -14,5 +14,9 @@
   <file alias="alert62.png">images/alert62.png</file>
   <!--Loading Animation -->
   <file alias="loading62.png">images/loading62.gif</file>
+  <!--Filled Question Mark Help Icon -->
+  <file alias="filled?41.png">images/question_mark_filled41.png</file>
+    <file alias="filled?20.png">images/question_mark_filled20.png</file>
+
 </qresource>
 </RCC>
