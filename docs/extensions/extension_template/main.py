@@ -20,11 +20,15 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 #import python modules created by qtDesigner and converted using pyuic4
-from from extensions.extension_template.ui import Ui_main
+from extensions.contrib.extension_template.ui import Ui_main
 
 class ViewPort(Ui_main.ViewPort):
     """
     
     """
+    def __init__(self, parent=None):
+        super().__init__()
+        self.setupUi(self)
+
 
 
