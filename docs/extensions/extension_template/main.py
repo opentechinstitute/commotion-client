@@ -30,11 +30,13 @@ class ViewPort(Ui_main.ViewPort):
     start_report_collection = QtCore.pyqtSignal()
     data_report = QtCore.pyqtSignal(str, dict)
     error_report = QtCore.pyqtSignal(str)
+    on_stop = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__()
+        self._dirty = False
         self.setupUi(self)
-
+        self.start_report_collection.connect(self.send_signal)
 
     def send_signal(self):
         self.data_report.emit("myModule", {"value01":"value", "value02":"value", "value03":"value"})
@@ -42,4 +44,10 @@ class ViewPort(Ui_main.ViewPort):
     def send_error(self):
         self.error_report.emit("THIS IS AN ERROR MESSAGE!!!")
 
-
+    @property
+    def is_dirty(self):
+        """The current state of the viewport object """
+        return self.dirty
+        
+    def clean_up(self):
+        self.on_stop.emit()

@@ -35,6 +35,7 @@ class ViewPort(Ui_main.ViewPort):
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
+        self.start_report_collection.connect(self.send_signal)
 
 
     def send_signal(self):
