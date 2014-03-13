@@ -27,8 +27,19 @@ class ViewPort(Ui_main.ViewPort):
     """
     
     """
-    
+
+    start_report_collection = QtCore.pyqtSignal()
+    data_report = QtCore.pyqtSignal(str, dict)
+    error_report = QtCore.pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
+
+
+    def send_signal(self):
+        self.data_report.emit("myModule", {"value01":"value", "value02":"value", "value03":"value"})
+
+    def send_error(self):
+        self.error_report.emit("THIS IS AN ERROR MESSAGE!!!")
 
