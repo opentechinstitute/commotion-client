@@ -22,43 +22,28 @@ from PyQt4 import QtGui
 from assets import commotion_assets_rc
 from GUI.menu_bar import MenuBar
 from GUI.crash_report import CrashReport
-from GUI.welcome_page import ViewPort
+from GUI import welcome_page
 
 class MainWindow(QtGui.QMainWindow):
     """
     The central widget for the commotion client. This widget initalizes all other sub-widgets and extensions as well as defines the paramiters of the main GUI container.
     """
     
-    #Closing Signal used by children to do any clean-up or saving needed
-    closing = QtCore.pyqtSignal()
+    #Clean up signal atched by children to do any clean-up or saving needed
+    clean_up = QtCore.pyqtSignal()
     app_message = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__()
         #Keep track of if the gui needs any clean up / saving.
-        self.dirty = False
+        self._dirty = False
         self.log = logging.getLogger("commotion_client."+__name__)
 
-        try:
-            self.setup_crash_reporter()
-        except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to setup Crash reporter."))
-            self.log.debug(_excp, exc_info=1)
-            raise
-
-        try:
-            self.setup_menu_bar()
-        except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to setup Menu Bar."))
-            self.log.debug(_excp, exc_info=1)
-            raise
-
-        try:
-            self.setup_view_port()
-        except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to setup view port."))
-            self.log.debug(_excp, exc_info=1)
-            raise
+        self.setup_crash_reporter()
+        self.setup_menu_bar()
+        
+        self.next_viewport = welcome_page.ViewPort(self)
+        self.set_viewport()
         
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
         try:
@@ -99,7 +84,7 @@ class MainWindow(QtGui.QMainWindow):
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.menu_dock)
 
         #Create slot to monitor when menu-bar wants the main window to change the main-viewport
-        self.connect(self.menu_bar, QtCore.SIGNAL("viewportRequested()"), self.changeViewport)
+        self.connect(self.menu_bar, QtCore.SIGNAL("viewportRequested()"), self.change_viewport)
 
     def setup_crash_reporter(self):
         try:
@@ -111,9 +96,13 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.crash_report.crash.connect(self.crash)
 
-    def setup_view_port(self):
-        #Set up Main Viewport
-        self.viewport = ViewPort(self)
+    def set_viewport(self):
+        """Set viewport to next viewport and load viewport """
+        self.viewport = self.next_viewport
+        self.load_viewport()
+
+    def load_viewport(self):
+        """Apply current viewport to the central widget and set up proper signal's for communication. """
         self.setCentralWidget(self.viewport)
 
         #connect viewport extension to crash reporter
@@ -123,20 +112,18 @@ class MainWindow(QtGui.QMainWindow):
         #connect error reporter to crash reporter
         self.viewport.error_report.connect(self.crash_report.alert_user)
 
+        #Attach clean up signal
+        self.clean_up.connect(self.viewport.clean_up)
 
-        #REMOVE THIS TEST CENTRAL WIDGET SECTION
-        #==================================
-        #from tests.extensions.test_ext001 import myMain
-        #self.centralwidget = QtGui.QWidget(self)
-        #self.centralwidget.setMinimumSize(600, 600)
-        #self.central_app = myMain.viewport(self)
-        #self.setCentralWidget(self.central_app)
-
-
-            
-    def changeViewport(self, viewport):
+    def change_viewport(self, viewport):
+        """Prepare next viewport for loading and start loading process when ready."""
         self.log.debug(QtCore.QCoreApplication.translate("logs", "Request to change viewport received."))
-        self.viewport.setViewport(viewport)
+        self.next_viewport = viewport
+        if self.viewport.is_dirty:
+            self.viewport.on_stop.connect(self.set_viewport)
+            self.clean_up.emit()
+        else:
+            self.set_viewport()
 
     def purge(self):
         """
@@ -174,8 +161,8 @@ class MainWindow(QtGui.QMainWindow):
         self.close()
 
     def cleanup(self):
-        self.closing.emit() #send signal for others to clean up if they need to
-        if self.dirty:
+        self.clean_up.emit() #send signal for others to clean up if they need to
+        if self.is_dirty:
             self.save_settings()
 
 
@@ -233,10 +220,16 @@ class MainWindow(QtGui.QMainWindow):
         """
         Emits a closing signal to allow other windows who need to clean up to clean up and then exits the application.
         """
-        self.closing.emit() #send signal for others to clean up if they need to
+        self.clean_up.emit() #send signal for others to clean up if they need to
         if crash_type == "restart":
             self.app_message.emit("restart")
         else:
             self.exitOnClose = True
             self.close()
+            
+    @property
+    def is_dirty(self):
+        """Get the current state of the main window"""
+        return self._dirty
+
         
