@@ -22,7 +22,7 @@ from PyQt4 import QtGui
 from assets import commotion_assets_rc
 from GUI.menu_bar import MenuBar
 from GUI.crash_report import CrashReport
-
+from GUI.welcome_page import ViewPort
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -35,18 +35,30 @@ class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
-        self.dirty = False #The variable to keep track of state for tracking if the gui needs any clean up.
-        #set function logger
-        self.log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
+        #Keep track of if the gui needs any clean up / saving.
+        self.dirty = False
+        self.log = logging.getLogger("commotion_client."+__name__)
 
         try:
-            self.crash_report = CrashReport()
+            self.setup_crash_reporter()
         except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load crash reporter. Ironically, this means that the application must be halted."))
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to setup Crash reporter."))
             self.log.debug(_excp, exc_info=1)
             raise
-        else:
-            self.crash_report.crash.connect(self.crash)
+
+        try:
+            self.setup_menu_bar()
+        except Exception as _excp:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to setup Menu Bar."))
+            self.log.debug(_excp, exc_info=1)
+            raise
+
+        try:
+            self.setup_view_port()
+        except Exception as _excp:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to setup view port."))
+            self.log.debug(_excp, exc_info=1)
+            raise
         
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
         try:
@@ -55,36 +67,24 @@ class MainWindow(QtGui.QMainWindow):
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load window settings."))
             self.log.debug(_excp, exc_info=1)
             raise
-
+        
         #set main menu to not close application on exit events
         self.exitOnClose = False
         self.remove_on_close = False
 
-
-
-        #Set up Main Viewport
-        #self.viewport = Viewport(self)
-
-
-        #REMOVE THIS TEST CENTRAL WIDGET SECTION
         #==================================        
-        from tests.extensions.test_ext001 import myMain
-        self.centralwidget = QtGui.QWidget(self)
-        self.centralwidget.setMinimumSize(600, 600)
-        self.central_app = myMain.viewport(self)
-        self.setCentralWidget(self.central_app)
-
-        #connect central app to crash reporter
-        self.central_app.data_report.connect(self.crash_report.crash_info)
-        self.crash_report.crash_override.connect(self.central_app.start_report_collection)
-        #connect error reporter to crash reporter
-        self.central_app.error_report.connect(self.crash_report.alert_user)
-
-        #==================================
         
-        #Set up menu bar.
+    def toggle_menu_bar(self):
+        #if menu shown... then
+        #DockToHide = self.findChild(name="MenuBarDock")
+        #QMainWindow.removeDockWidget (self, QDockWidget dockwidget)
+        #else
+        #bool QMainWindow.restoreDockWidget (self, QDockWidget dockwidget)
+        pass
+
+    def setup_menu_bar(self):
+        """ Set up menu bar. """
         self.menu_bar = MenuBar(self)
-        
         #Create dock for menu-bar TEST
         self.menu_dock = QtGui.QDockWidget(self)
         #turn off title bar
@@ -100,16 +100,40 @@ class MainWindow(QtGui.QMainWindow):
 
         #Create slot to monitor when menu-bar wants the main window to change the main-viewport
         self.connect(self.menu_bar, QtCore.SIGNAL("viewportRequested()"), self.changeViewport)
-        
-    def toggle_menu_bar(self):
-        #if menu shown... then
-        #DockToHide = self.findChild(name="MenuBarDock")
-        #QMainWindow.removeDockWidget (self, QDockWidget dockwidget)
-        #else
-        #bool QMainWindow.restoreDockWidget (self, QDockWidget dockwidget)
-        pass
 
+    def setup_crash_reporter(self):
+        try:
+            self.crash_report = CrashReport()
+        except Exception as _excp:
+            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load crash reporter. Ironically, this means that the application must be halted."))
+            self.log.debug(_excp, exc_info=1)
+            raise
+        else:
+            self.crash_report.crash.connect(self.crash)
+
+    def setup_view_port(self):
+        #Set up Main Viewport
+        self.viewport = ViewPort(self)
+        self.setCentralWidget(self.viewport)
+
+        #connect viewport extension to crash reporter
+        self.viewport.data_report.connect(self.crash_report.crash_info)
+        self.crash_report.crash_override.connect(self.viewport.start_report_collection)
         
+        #connect error reporter to crash reporter
+        self.viewport.error_report.connect(self.crash_report.alert_user)
+
+
+        #REMOVE THIS TEST CENTRAL WIDGET SECTION
+        #==================================
+        #from tests.extensions.test_ext001 import myMain
+        #self.centralwidget = QtGui.QWidget(self)
+        #self.centralwidget.setMinimumSize(600, 600)
+        #self.central_app = myMain.viewport(self)
+        #self.setCentralWidget(self.central_app)
+
+
+            
     def changeViewport(self, viewport):
         self.log.debug(QtCore.QCoreApplication.translate("logs", "Request to change viewport received."))
         self.viewport.setViewport(viewport)
