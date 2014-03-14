@@ -158,7 +158,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         except Exception as _excp: #log failure here and exit
             _catch_all = QtCore.QCoreApplication.translate("logs", "Could not fully initialize applicaiton. Application must be halted.")
             self.log.critical(_catch_all)
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             self.end(_catch_all)
 
     def start_full(self):
@@ -171,7 +171,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             except Exception as _excp:
                 _catch_all = QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted.")
                 self.log.critical(_catch_all)
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
                 self.end(_catch_all)
             else:
                 self.init_main()
@@ -180,7 +180,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             except Exception as _excp:
                 _catch_all = QtCore.QCoreApplication.translate("logs", "Could not create system tray. Application must be halted.")
                 self.log.critical(_catch_all)
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
                 self.end(_catch_all)
             else:
                 self.init_sys_tray()
@@ -195,7 +195,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.hide_main_window(force=True, errors="strict")
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not close down existing GUI componenets to switch to daemon mode."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
         try:
             #create controller and sys tray
@@ -204,7 +204,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             #    self.controller = create_controller()
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not start daemon. Application must be halted."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
         else:
             self.init_sys_tray()
@@ -223,12 +223,12 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             if force_close:
                 _catch_all = QtCore.QCoreApplication.translate("logs", "Could not cleanly close client. Application must be halted.")
                 self.log.critical(_catch_all)
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
                 self.end(_catch_all)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Client could not be closed."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
 
     def restart_client(self, force_close=None):
         """
@@ -246,12 +246,12 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             if force_close:
                 _catch_all = QtCore.QCoreApplication.translate("logs", "Client could not be restarted. Applicaiton will now be halted")
                 self.log.error(_catch_all)
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
                 self.end(_catch_all)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Client could not be restarted."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you restart the application."))
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
                 raise
         _restart.end()
 
@@ -271,7 +271,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             _main = main_window.MainWindow()
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create Main Window. Application must be halted."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
         else:
             return _main
@@ -287,13 +287,13 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.sys_tray.show_main.connect(self.main.bring_front)
         except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not initialize connections between the main window and other application components."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
         try:
             self.main.show()
         except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not show the main window."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
 
     def hide_main_window(self, force=None, errors=None):
@@ -308,7 +308,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             self.main.exit()
         except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not hide main window. Attempting to close all and only open taskbar."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             if force:
                 try:
                     self.main.purge()
@@ -316,7 +316,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                     self.main = self.create_main_window()
                 except Exception as _excp:
                     self.log.error(QtCore.QCoreApplication.translate("logs", "Could not force main window restart."))
-                    self.log.debug(_excp, exc_info=1)
+                    self.log.exception(_excp)
                     raise
             elif errors == "strict":
                 raise
@@ -334,7 +334,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             self.main.app_message.connect(self.process_message)
         except:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could close and re-open the main window."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             if errors == "strict":
                 raise
             else:
@@ -363,12 +363,12 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 except Exception as _excp:
                     _catch_all = QtCore.QCoreApplication.translate("logs", "Could not close main window using its internal mechanisms. Application will be halted.")
                     self.log.critical(_catch_all)
-                    self.log.debug(_excp, exc_info=1)
+                    self.log.exception(_excp)
                     self.end(_catch_all)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close main window."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
                 raise
 
 #=================================================
@@ -385,7 +385,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             #self.controller.init() #??????
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not create controller. Application must be halted."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
 
     def init_controller(self):
@@ -410,12 +410,12 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 except Exception as _excp:
                     _catch_all = QtCore.QCoreApplication.translate("logs", "Could not close controller using its internal mechanisms. Application will be halted.")
                     self.log.critical(_catch_all)
-                    self.log.debug(_excp, exc_info=1)
+                    self.log.exception(_excp)
                     self.end(_catch_all)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Could not cleanly close controller."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
                 raise
 
 
@@ -433,7 +433,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 self.sys_tray.show_main.connect(self.main.bring_front)
         except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not initialize connections between the system tray and other application components."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
 
     def create_sys_tray(self):
@@ -444,7 +444,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             tray = system_tray.TrayIcon()
         except Exception as _excp:
             self.log.error(QtCore.QCoreApplication.translate("logs", "Could not start system tray."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
         else:
             return tray
@@ -469,12 +469,12 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
                 except:
                     _catch_all = QtCore.QCoreApplication.translate("logs", "Could not close system tray using its internal mechanisms. Application will be halted.")
                     self.log.critical(_catch_all)
-                    self.log.debug(_excp, exc_info=1)
+                    self.log.exception(_excp)
                     self.end(_catch_all)
             else:
                 self.log.error(QtCore.QCoreApplication.translate("logs", "Could not close system tray."))
                 self.log.info(QtCore.QCoreApplication.translate("logs", "It is reccomended that you close the entire application."))
-                self.log.debug(_excp, exc_info=1)
+                self.log.exception(_excp)
                 raise
 
 #=================================================

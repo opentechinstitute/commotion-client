@@ -39,7 +39,7 @@ class MainWindow(QtGui.QMainWindow):
         self._dirty = False
         self.log = logging.getLogger("commotion_client."+__name__)
 
-        self.setup_crash_reporter()
+        self.init_crash_reporter()
         self.setup_menu_bar()
         
         self.next_viewport = welcome_page.ViewPort(self)
@@ -50,7 +50,7 @@ class MainWindow(QtGui.QMainWindow):
             self.load_settings()
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load window settings."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
         
         #set main menu to not close application on exit events
@@ -86,12 +86,13 @@ class MainWindow(QtGui.QMainWindow):
         #Create slot to monitor when menu-bar wants the main window to change the main-viewport
         self.connect(self.menu_bar, QtCore.SIGNAL("viewportRequested()"), self.change_viewport)
 
-    def setup_crash_reporter(self):
+    def init_crash_reporter(self):
+        """ """
         try:
             self.crash_report = CrashReport()
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load crash reporter. Ironically, this means that the application must be halted."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
         else:
             self.crash_report.crash.connect(self.crash)
@@ -190,14 +191,14 @@ class MainWindow(QtGui.QMainWindow):
             geometry = _settings.value("geometry") or defaults['geometry']
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not load window geometry from settings file or defaults."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
         _settings.endGroup()
         try:
             self.setGeometry(geometry)
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Cannot create GUI window."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
             raise
 
     def save_settings(self):
@@ -212,7 +213,7 @@ class MainWindow(QtGui.QMainWindow):
             _settings.setValue("geometry", self.geometry())
         except Exception as _excp:
             self.log.warn(QtCore.QCoreApplication.translate("logs", "Could not save window geometry. Will continue without saving window geometry."))
-            self.log.debug(_excp, exc_info=1)
+            self.log.exception(_excp)
         _settings.endGroup()
         
 
