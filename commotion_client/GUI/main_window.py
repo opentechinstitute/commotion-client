@@ -188,7 +188,7 @@ class MainWindow(QtGui.QMainWindow):
 
         #Load settings from saved, or use defaults
         try:
-            geometry = _settings.value("geometry") or defaults['geometry']
+            geometry = _settings.value("geometry", defaults['geometry']) 
         except Exception as _excp:
             self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not load window geometry from settings file or defaults."))
             self.log.exception(_excp)
