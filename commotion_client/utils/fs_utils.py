@@ -13,7 +13,6 @@ import logging
 #set function logger
 log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
 
-
 def is_file(unknown):
     """
 	Determines if a file is accessable. It does NOT check to see if the file contains any data.
