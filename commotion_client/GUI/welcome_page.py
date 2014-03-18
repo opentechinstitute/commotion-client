@@ -39,7 +39,7 @@ class ViewPort(Ui_welcome_page.ViewPort):
     @property
     def is_dirty(self):
         """The current state of the viewport object """
-        return self.dirty
+        return self._dirty
         
     def clean_up(self):
         self.on_stop.emit()
