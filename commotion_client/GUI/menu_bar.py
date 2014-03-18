@@ -25,6 +25,9 @@ from utils import config
 
 class MenuBar(QtGui.QWidget):
 
+    #create signal used to communicate with mainWindow on viewport change
+    viewport_requested = QtCore.pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__()
 
@@ -33,8 +36,6 @@ class MenuBar(QtGui.QWidget):
         #set function logger
         self.log = logging.getLogger("commotion_client."+__name__)
 
-        #create signal used to communicate with mainWindow on viewport change
-        self.viewportRequested = QtCore.pyqtSignal(str)
         try:
             self.populateMenu()
         except Exception as e:
@@ -43,19 +44,19 @@ class MenuBar(QtGui.QWidget):
         self.setLayout(self.layout)
         
 
-    def requestViewport(self, viewport):
+    def request_viewport(self, viewport):
         """
         When called will emit a request for a viewport change.
         """
         self.log.debug(QtCore.QCoreApplication.translate("logs", "Request to change viewport sent"))
-        self.viewportRequested.emit(viewport)
+        self.viewport_requested.emit(viewport)
 
     def populateMenu(self):
         """
         Clears and re-populates the menu using the loaded extensions.
         """
         menuItems = {}
-        extensions = list(config.findConfigs("extension"))
+        extensions = list(config.find_configs("extension"))
         if extensions:
             topLevel = self.getParents(extensions)
             for topLevelItem in topLevel:
@@ -112,7 +113,7 @@ class MenuBar(QtGui.QWidget):
                     subMenuItem = subMenuWidget(self)
                     subMenuItem.setText(QtCore.QCoreApplication.translate("Sub-Menu Item", ext['menuItem']))
                     #We use partial here to pass a variable along when we attach the "clicked()" signal to the MenuBars requestViewport function
-                    subMenuItem.clicked.connect(partial(self.requestViewport, ext['name']))
+                    subMenuItem.clicked.connect(partial(self.request_viewport, ext['name']))
                 except Exception as e:
                     self.log.error(QtCore.QCoreApplication.translate("logs", "Faile to create sub-menu \"{0}\" object for \"{1}\" object.".format(ext['name'], title)))
                     self.log.debug(e, exc_info=1)

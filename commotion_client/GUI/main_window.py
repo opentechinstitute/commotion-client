@@ -23,6 +23,8 @@ from assets import commotion_assets_rc
 from GUI.menu_bar import MenuBar
 from GUI.crash_report import CrashReport
 from GUI import welcome_page
+from utils import config
+from extensions.extension_manager import ExtensionManager
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -37,7 +39,8 @@ class MainWindow(QtGui.QMainWindow):
         super().__init__()
         #Keep track of if the gui needs any clean up / saving.
         self._dirty = False
-        self.log = logging.getLogger("commotion_client."+__name__)
+        self.log = logging.getLogger("commotion_client."+__name__
+        self.translate = QtCore.QCoreApplication.translate
 
         self.init_crash_reporter()
         self.setup_menu_bar()
@@ -49,7 +52,7 @@ class MainWindow(QtGui.QMainWindow):
         try:
             self.load_settings()
         except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load window settings."))
+            self.log.critical(self.translate("logs", "Failed to load window settings."))
             self.log.exception(_excp)
             raise
         
@@ -84,24 +87,24 @@ class MainWindow(QtGui.QMainWindow):
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.menu_dock)
 
         #Create slot to monitor when menu-bar wants the main window to change the main-viewport
-        self.connect(self.menu_bar, QtCore.SIGNAL("viewportRequested()"), self.change_viewport)
+        self.menu_bar.viewport_requested.connect(self.change_viewport)
 
     def init_crash_reporter(self):
         """ """
         try:
             self.crash_report = CrashReport()
         except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Failed to load crash reporter. Ironically, this means that the application must be halted."))
+            self.log.critical(self.translate("logs", "Failed to load crash reporter. Ironically, this means that the application must be halted."))
             self.log.exception(_excp)
             raise
         else:
             self.crash_report.crash.connect(self.crash)
 
     def set_viewport(self):
-        """Set viewport to next viewport and load viewport """
-        self.viewport = self.next_viewport
-        self.load_viewport()
-
+        """Load and set viewport to next viewport and load viewport """
+        self.viewport = ExtensionManager.get_GUI(self.next_viewport, "main")
+        self.load_viewport()        
+        
     def load_viewport(self):
         """Apply current viewport to the central widget and set up proper signal's for communication. """
         self.setCentralWidget(self.viewport)
@@ -118,7 +121,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def change_viewport(self, viewport):
         """Prepare next viewport for loading and start loading process when ready."""
-        self.log.debug(QtCore.QCoreApplication.translate("logs", "Request to change viewport received."))
+        self.log.debug(self.translate("logs", "Request to change viewport received."))
         self.next_viewport = viewport
         if self.viewport.is_dirty:
             self.viewport.on_stop.connect(self.set_viewport)
@@ -141,14 +144,14 @@ class MainWindow(QtGui.QMainWindow):
         """
         
         if self.exitOnClose:
-            self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a EXIT close event and will shutdown completely."))
+            self.log.debug(self.translate("logs", "Application has received a EXIT close event and will shutdown completely."))
             event.accept()
         elif self.remove_on_close:
-            self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a GUI closing close event and will close its main window."))
+            self.log.debug(self.translate("logs", "Application has received a GUI closing close event and will close its main window."))
             self.deleteLater()
             event.accept()
         else:
-            self.log.debug(QtCore.QCoreApplication.translate("logs", "Application has received a non-exit close event and will hide its main window."))
+            self.log.debug(self.translate("logs", "Application has received a non-exit close event and will hide its main window."))
             self.hide()
             event.setAccepted(True)
             event.ignore()
@@ -190,14 +193,14 @@ class MainWindow(QtGui.QMainWindow):
         try:
             geometry = _settings.value("geometry", defaults['geometry']) 
         except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Could not load window geometry from settings file or defaults."))
+            self.log.critical(self.translate("logs", "Could not load window geometry from settings file or defaults."))
             self.log.exception(_excp)
             raise
         _settings.endGroup()
         try:
             self.setGeometry(geometry)
         except Exception as _excp:
-            self.log.critical(QtCore.QCoreApplication.translate("logs", "Cannot create GUI window."))
+            self.log.critical(self.translate("logs", "Cannot create GUI window."))
             self.log.exception(_excp)
             raise
 
@@ -212,7 +215,7 @@ class MainWindow(QtGui.QMainWindow):
         try:
             _settings.setValue("geometry", self.geometry())
         except Exception as _excp:
-            self.log.warn(QtCore.QCoreApplication.translate("logs", "Could not save window geometry. Will continue without saving window geometry."))
+            self.log.warn(self.translate("logs", "Could not save window geometry. Will continue without saving window geometry."))
             self.log.exception(_excp)
         _settings.endGroup()
         
