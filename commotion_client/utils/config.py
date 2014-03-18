@@ -21,16 +21,16 @@ log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is 
 
 def find_configs(config_type, name=None):
     """
-    Function used to obtain the path to a config file.
+    Function used to obtain a config file.
 
     @param config_type The type of configuration file sought. (global, user, extension)
     @param name optional The name of the configuration file if known
 
-    @return list of tuples containing the path and name of found config files or False if a config matching the description cannot be found.
+    @return list of tuples containing a config name and its config.
     """
     config_files = get_config_paths(config_type)
     if config_files:
-        configs = get_config(config_files)
+        configs = get_configs(config_files)
         return configs
     elif name != None:
         for conf in configs:
@@ -70,7 +70,7 @@ def get_config_paths(config_type):
         return False
 
 
-def get_config(paths):
+def get_configs(paths):
     """
     Generator to retreive config files for the paths passed to it
 
@@ -85,14 +85,12 @@ def get_config(paths):
                 yield config
         else:
             log.error(QtCore.QCoreApplication.translate("logs", "Config file {0} does not exist and therefore cannot be loaded.".format(path)))
-        
 
 def load_config(config):
     """
     This function loads a json formatted config file and returns it.
 
-    @param fileName the name of the config file
-    @param path the path to the configuration file in question
+    @param config the path to a config file
     @return a dictionary containing the config files values
     """
     #Open the file
