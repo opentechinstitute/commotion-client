@@ -13,12 +13,14 @@ Key componenets handled within:
 import logging
 import sys
 import re
+import ipaddress
 
 #PyQt imports
 from PyQt4 import QtCore
 
 
 class ClientConfig():
+    """ """
 
     def __init__(self, config=None, directory=None):
         if config:
@@ -256,4 +258,31 @@ class ClientConfig():
                 return False
         else:
             self.log.warn(self.translate("logs", "Your system, {0} is not recognized. This may cause instability if file or path names are longer than your system allows.").format(platform))
+            return True
+
+class Networking():
+
+    def __init__():
+        self.log = logging.getLogger("commotion_client."+__name__)
+        self.translate = QtCore.QCoreApplication.translate
+
+    def ipaddr(self, ip, addr_type=None):
+        """
+        Checks if a string is a validly formatted IPv4 or IPv6 address.
+
+        @param ip str A ip address to be checked
+        @param addr_type int The appropriate version number: 4 for IPv4, 6 for IPv6.
+        """
+        try:
+            addr = ipaddress.ip_address( str( ip ))
+        except ValueError:
+            self.log.warn(self.translate("logs", "The value {0} is not an validly formed IP-address.").format(ip))
+            return False
+        if addr_type:
+            if addr.version == addr_type:
+                return True
+            else:
+                self.log.warn(self.translate("logs", "The value {0} is not an validly formed IPv{1}-address.").format(ip, addr_type))
+                return False
+        else:
             return True
