@@ -61,7 +61,7 @@ Taking just one value we can sketch out how the interface will represent it.
 
 Beyond the consitancy provided by common terms, common groupings are also important. In order to ensure that a user can easily modify related configurations. We have grouped the configuration values in the following two groups.
 
-
+```
 security {
   "announce"
   "encryption"
@@ -87,7 +87,7 @@ networking {
   "ipgenmask"
   "dns"
 }
-
+```
 
 TODO:
   * Show process of designing section headers
@@ -140,7 +140,7 @@ This object saves as a ui file. If you are developing from within the commotion_
 Before the main window will load your application it needs a configuration file to load it from. This config file should be placed in your extensions main directory. For testing, you can place a copy of it in the folder "commotion_client/data/extensions/." The Commotion client will then automatically load your extension from its place in the "commotion_client/extensions/contrib" directory. We will cover how to package your extension for installation in the last section.
 
 Create a file in your main extension directory called ```config.json```. In that file place a json structure including the following items.
-
+```
 {
 "name":"config_manager",
 "menuItem":"Configuration Editor",
@@ -150,24 +150,8 @@ Create a file in your main extension directory called ```config.json```. In that
 "main":"main",
 "tests":"test_suite"
 }
-
-The "taskbar," "tests," and "settings," values are optional. But we will be making them in this tutorial. Here are explanations of each value.
-
-name: The name of the extension. This will be the name that the commotion client will use to import the extension after installation, and MUST be unique across the extensions that the user has installed. [from extensions import name]
-
-menuItem: The name displayed in the sub-menu that will load this extension.
-
-menuLevel: The level at which this sub-menu item will be displayed in relation to other (Non-Core) sub-menu items. The lower the number the higher up in the sub-menu. Core extension sub-menu items are ranked first, with other extensions being placed below them in order of ranking.
-
-parent: The top-level menu-item that this extension falls under. If this top-level menu does not exist it will be created. The top-level menu-item is simply a container that when clicked reveals the items below it.
-
-settings: (optional) The file that contains the settings page for the extension. If this is not included in the config file and a “settings” class is not found in the file listed under the “main” option the extension will not list a settings button in the extension settings page. [self.settings = name.settings.Settings(settingsViewport)]
-
-taskbar: (optional) The file that contains the function that will return the custom task-bar when run. The implementation of this is still in development. If not set and a “taskbar” class is not found in the file listed under the “main” option the default taskbar will be implemented. [self.taskbar = name.taskbar.TaskBar(mainTaskbar)]
-
-main: (optional) The file name to use to populate the extensions initial view-port. This can be the same file as the settings and taskbar as long as that file contains seperate functions for each object type. [self.viewport = name.main.ViewPort(mainViewport)]
-
-tests: (optional, but bad form if missing) The file that contains the unitTests for this extension. This will be run when the main test_suite is called. If missing you will make the Commotion development team cry. [self.viewport = name.main.ViewPort(mainViewport)]
+```
+The "taskbar," "tests," and "settings," values are optional. But we will be making them in this tutorial. You can find explanations of each value at https://wiki.commotionwireless.net/doku.php?id=commotion_architecture:commotion_client_architecture#extension_config_properties
 
 Once you have a config file in place we can actually create the logic behind our application.
 
