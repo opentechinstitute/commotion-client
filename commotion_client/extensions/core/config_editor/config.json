@@ -1,7 +1,7 @@
 {
-"name":"extension_template",
-"menuItem":"Extension Template",
-"parent":"Templates",
+"name":"config_manager",
+"menuItem":"Commotion Config Editor",
+"parent":"Advanced",
 "settings":"settings",
 "taskbar":"task_bar",
 "main":"main",
