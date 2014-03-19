@@ -13,15 +13,15 @@ from PyQt4 import QtCore
 #Standard Library Imports
 import os
 import logging
-
-#set function logger
-log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
+import uuid
 
 def is_file(unknown):
     """
 	Determines if a file is accessable. It does NOT check to see if the file contains any data.
 	"""
-#stolen from https://github.com/isislovecruft/python-gnupg/blob/master/gnupg/_util.py
+    #stolen from https://github.com/isislovecruft/python-gnupg/blob/master/gnupg/_util.py
+    #set function logger
+    log = logging.getLogger("commotion_client."+__name__)
     try:
         assert os.lstat(unknown).st_size > 0, "not a file: %s" % unknown
     except (AssertionError, TypeError, IOError, OSError) as err:
@@ -43,60 +43,60 @@ def walklevel(some_dir, level=1):
         num_sep_this = root.count(os.path.sep)
         if num_sep + level <= num_sep_this:
             del dirs[:]
-            
+
 def make_temp_dir(new=None):
     """Makes a temporary directory and returns the QDir object.
 
     @param new bool Create a new uniquely named directory within the exiting Commotion temp directory and return the new folder object
     """
+    log = logging.getLogger("commotion_client."+__name__)
     temp_path = "/Commotion/"
     if new:
         unique_dir_name = uuid.uuid4()
-        temp_path += str( unique_dir_name )
-#    temp_dir = QtCore.QDir( QtCore.QDir.tempPath() + temp_path )
-    temp_dir = QtCore.QDir( os.path.join(QtCore.QDir.tempPath(), temp_path ))
-    if QtCore.QDir().mkpath( temp_dir.path() ):
-      log.debug( QtCore.QCoreApplication.translate( "logs", "Creating main temporary directory" ))
+        temp_path += str(unique_dir_name)
+#    temp_dir = QtCore.QDir(QtCore.QDir.tempPath() + temp_path)
+    temp_dir = QtCore.QDir(os.path.join(QtCore.QDir.tempPath(), temp_path))
+    if QtCore.QDir().mkpath(temp_dir.path()):
+        log.debug(QtCore.QCoreApplication.translate("logs", "Creating main temporary directory"))
     else:
-        _error = QtCore.QCoreApplication.translate( "logs", "Error creating temporary directory" )
-        log.error( _error )
-        raise IOError( _error )
+        _error = QtCore.QCoreApplication.translate("logs", "Error creating temporary directory")
+        log.error(_error)
+        raise IOError(_error)
     return temp_dir
- 
 
-def clean_dir( path=None ):
+
+def clean_dir(path=None):
     """ Cleans a directory. If not given a path it will clean the FULL temporary directory"""
-
+    log = logging.getLogger("commotion_client."+__name__)
     if not path:
-        path = QtCore.QDir( os.path.join(QtCore.QDir.tempPath(), "Commotion" ))
-        
-    path.setFilter( QtCore.QDir.NoSymLinks | QtCore.QDir.Files )
+        path = QtCore.QDir(os.path.join(QtCore.QDir.tempPath(), "Commotion"))
+    path.setFilter(QtCore.QDir.NoSymLinks | QtCore.QDir.Files)
     list_of_files = path.entryList()
- 
+
     for file_ in list_of_files:
-      file_ = os.path.join( path.path(), file_ )
-      if not QtCore.QFile( file_ ).remove():
-          _error = QtCore.QCoreApplication.translate( "logs", "Error saving extension to extensions directory." )
-          log.error( _error )
-          raise IOError( _error )
-    path.rmpath( path.path() )
+        file_ = os.path.join(path.path(), file_)
+        if not QtCore.QFile(file_).remove():
+            _error = QtCore.QCoreApplication.translate("logs", "Error saving extension to extensions directory.")
+            log.error(_error)
+            raise IOError(_error)
+    path.rmpath(path.path())
     return True
 
-def copy_contents( start, end ):
+def copy_contents(start, end):
     """ Copies the contents of one directory into another
 
     @param start QDir A Qdir object for the first directory
     @param end QDir A Qdir object for the final directory
     """
-        
-    start.setFilter( QtCore.QDir.NoSymLinks | QtCore.QDir.Files )
-    list_of_files = path.entryList()
- 
+    log = logging.getLogger("commotion_client."+__name__)
+    start.setFilter(QtCore.QDir.NoSymLinks | QtCore.QDir.Files)
+    list_of_files = start.entryList()
+
     for file_ in list_of_files:
-      source = os.path.join( start.path(), file_ )
-      dest = os.path.join( end.path(), file_ )
-      if not QtCore.QFile( source ).copy( dest ):
-          _error = QtCore.QCoreApplication.translate( "logs", "Error copying file into extensions directory. File already exists." )
-          log.error( _error )
-          raise IOError( _error )
+        source = os.path.join(start.path(), file_)
+        dest = os.path.join(end.path(), file_)
+        if not QtCore.QFile(source).copy(dest):
+            _error = QtCore.QCoreApplication.translate("logs", "Error copying file into extensions directory. File already exists.")
+            log.error(_error)
+            raise IOError(_error)
     return True
