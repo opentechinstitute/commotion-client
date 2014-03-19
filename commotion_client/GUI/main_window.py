@@ -24,7 +24,7 @@ from GUI.menu_bar import MenuBar
 from GUI.crash_report import CrashReport
 from GUI import welcome_page
 from utils import config
-from extensions.extension_manager import ExtensionManager
+from utils import extension_manager
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -39,14 +39,14 @@ class MainWindow(QtGui.QMainWindow):
         super().__init__()
         #Keep track of if the gui needs any clean up / saving.
         self._dirty = False
-        self.log = logging.getLogger("commotion_client."+__name__
+        self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
 
         self.init_crash_reporter()
         self.setup_menu_bar()
         
-        self.next_viewport = welcome_page.ViewPort(self)
-        self.set_viewport()
+        self.viewport = welcome_page.ViewPort(self)
+        self.load_viewport()
         
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
         try:
@@ -102,8 +102,9 @@ class MainWindow(QtGui.QMainWindow):
 
     def set_viewport(self):
         """Load and set viewport to next viewport and load viewport """
-        self.viewport = ExtensionManager.get_GUI(self.next_viewport, "main")
-        self.load_viewport()        
+        ext_manager = extension_manager.ExtensionManager
+        self.viewport = ext_manager.import_extension(self.next_viewport).ViewPort(self)
+        self.load_viewport()
         
     def load_viewport(self):
         """Apply current viewport to the central widget and set up proper signal's for communication. """
