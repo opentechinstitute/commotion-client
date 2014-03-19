@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+                
 
 """
 config
@@ -14,7 +14,7 @@ import logging
 
 from PyQt4 import QtCore
 
-from utils import fsUtils
+from utils import fs_utils
 
 #set function logger
 log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.
@@ -54,7 +54,7 @@ def get_config_paths(config_type):
         self.log.exception(_excp)
         return False
     try:
-        for root, dirs, files in fsUtils.walklevel(path):
+        for root, dirs, files in fs_utils.walklevel(path):
             for file_name in files:
                 if file_name.endswith(".conf"):
                     config_files.append(os.path.join(root, file_name))
@@ -79,7 +79,7 @@ def get_configs(paths):
     """
     #load config file
     for path in paths:
-        if fsUtils.is_file(path):
+        if fs_utils.is_file(path):
             config = load_config(path)
             if config:
                 yield config
