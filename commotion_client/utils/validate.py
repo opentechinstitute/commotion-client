@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -27,7 +28,7 @@ class ClientConfig(object):
     def __init__(self, config=None, directory=None):
         if config:
             self._config = config.load_config(config)
-        self._directory = directory
+        self._directory = QtCore.QDir(directory)
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
         self.errors = None
@@ -38,11 +39,18 @@ class ClientConfig(object):
         @param config string The absolute path to a config file for this extension
         @param directory string The absolute path to this extensions directory
         """
-        self._directory = directory
+        self._directory = QtCore.QDir(directory)
         if config:
             self._config = config.load_config(config)
         else:
-            default_config_path = os.path.join(self._directory, "config.json")
+            files = self._directory.entryList()
+            for file_ in files:
+                if re.match("^.*\.conf$", file_):
+                    default_config_path = os.path.join(self._directory, file_)
+            try:
+                assert default_config_path
+            except NameError:
+                raise IOError(self.translate("logs", "Extension does not contain a config file and is therefore invalid."))
             if fs_utils.is_file(default_config_path):
                 self._config = config.load_config(default_config_path)
             else:
