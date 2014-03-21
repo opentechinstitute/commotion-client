@@ -43,8 +43,12 @@ def find_configs(config_type, name=None):
         return False
 
 def get_config_paths(config_type):
+    """
+    Returns the paths to all config files.
 
-    configLocations = {"global":"data/global/", "user":"data/user/", "extension":"data/extensions/"}
+    @param config_type string The type of config to get [ global|user|extension ]
+    """
+    configLocations = {"global":"data/global/configs", "user":"data/user/configs", "extension":"data/extensions/configs"}
     config_files = []
     
     try:
