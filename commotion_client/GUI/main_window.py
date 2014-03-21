@@ -191,19 +191,13 @@ class MainWindow(QtGui.QMainWindow):
         _settings.beginGroup("MainWindow")
 
         #Load settings from saved, or use defaults
-        try:
-            geometry = _settings.value("geometry", defaults['geometry']) 
-        except Exception as _excp:
-            self.log.critical(self.translate("logs", "Could not load window geometry from settings file or defaults."))
-            self.log.exception(_excp)
-            raise
+        geometry = _settings.value("geometry", defaults['geometry']).toRect()
+        if geometry.isNull() == True:
+            _error = self.translate("logs", "Could not load window geometry from settings file or defaults.")
+            self.log.critical(_error)
+            raise EnvironmentError(_error)
         _settings.endGroup()
-        try:
-            self.setGeometry(geometry)
-        except Exception as _excp:
-            self.log.critical(self.translate("logs", "Cannot create GUI window."))
-            self.log.exception(_excp)
-            raise
+        self.setGeometry(geometry)
 
     def save_settings(self):
         """
