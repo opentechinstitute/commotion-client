@@ -173,15 +173,16 @@ class ExtensionManager(object):
         Raises:
           KeyError: If an extension does not exist.
         """
+        _settings = QtCore.QSettings()
+        _settings.beginGroup("extensions")
         core_ext = _settings.value("core/"+str(name))
-        contrib_ext _settings.value("contrib/"+str(name))
+        contrib_ext = _settings.value("contrib/"+str(name))
         if not core_ext.isNull() and contrib_ext.isNull():
             return "core"
         elif not contrib_ext.isNull() and core_ext.isNull():
             return "contrib"
         else:
             _error = self.translate("logs", "This extension does not exist.")
-            self.log.error(_error)
             raise KeyError(_error)
 
     def load_user_interface(self, extension_name, subsection=None):
