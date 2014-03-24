@@ -57,8 +57,34 @@ class ExtensionManager(object):
             return False
 
     def load_all(self):
-        ERRORS_HERE()
-        
+        installed = self.get_installed()
+        saved = config.get_config_paths("extensions")
+        for saved_path in saved:
+            _saved_config = config.load_config(saved_path)
+            _main_ext_dir = os.path.join(QtCore.QDir.current(), "extensions")
+            if saved['name'] in installed.keys():
+                _type = installed[saved_config['name']]
+                _type_dir = os.path.join(main_ext_dir, _type)
+            else:
+                _core_dir = QtCore.QDir(os.path.join(_main_ext_dir, "core"))
+                if _core_dir.exists() and _core_dir.exists(saved_config['name']):
+                    _type = "core"
+                    _type_dir = _core_dir
+                else:
+                    _contrib_dir = QtCore.QDir(os.path.join(_main_ext_dir, "contrib"))
+                    if _contrib_dir.exists() and _contrib_dir.exists(saved_config['name']):
+                        _type = "contrib"
+                        _type_dir = _contrib_dir
+                    else:
+                        return False
+            _extension_dir = os.path.join(_type_dir, saved_config['name'])
+            _extension = validate.ClientConfig(config, extension_dir)
+            if not _extension.validate_all():
+                self.log.warn(self.translate("logs", "Extension {0}is invalid and cannot be saved.".format(saved_config['name'])))
+            else:
+                if not self.save_extension(saved['name'], _type):
+                    self.log.warn(self.translate("logs", "Extension {0} could not be saved.".format(saved_config['name'])))
+                
     @staticmethod
     def get_installed():
         """Get all installed extensions seperated by type.
@@ -527,7 +553,19 @@ class ExtensionManager(object):
         return temp_dir
 
     def save_unpacked_extension(self, temp_dir, extension_name, extension_type):
-        """Moves an extension from the temporary directory to the extension directory."""
+        """Moves an extension from a temporary directory to the extension directory.
+        
+        Args:
+          temp_dir (string): Absolute path to the temporary directory
+          extension_name (string): The name of the extension
+          extension_type (string): The type of the extension (core or contrib)
+        
+        Returns:
+          bool True if successful, false if unsuccessful.
+        
+        Raises:
+          ValueError: If an extension with that name already exists. 
+        """
         extension_path = "extensions/"+extension_type+"/"+extension_name
         full_path = os.path.join(QtCore.QDir.currentPath(), extension_path)
         if not fs_utils.is_file(full_path):
@@ -545,7 +583,7 @@ class ExtensionManager(object):
                 return False
         else:
             _error = QtCore.QCoreApplication.translate("logs", "An extension with that name already exists. Please delete the existing extension and try again.")
-            self.log.error(_error)
+            self.log.info(_error)
             raise ValueError(_error)
 
 class InvalidSignature(Exception):
