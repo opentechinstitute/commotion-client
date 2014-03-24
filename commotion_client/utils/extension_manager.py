@@ -481,6 +481,27 @@ class ExtensionManager(object):
                 raise IOError(_error)
         return True
 
+    def remove_config(self, name):
+        """Removes a config file from the "loaded" core extension config data folder.
+                       
+        Args:
+          name (string): The name of the config file
+        
+        Returns:
+          bool: True if successful
+        
+        Raises:
+          IOError: If a config file does not exist in the extension data folder.
+        """
+        data_dir = os.path.join(QtCore.QDir.current(), "data")
+        config_dir = os.path.join(data_dir, "extensions")
+        config = os.path.join(config_dir, name)
+        if QtCore.QFile(config).exists():
+            if not QtCore.QFile(config).remove():
+                _error = QtCore.QCoreApplication.translate("logs", "Error deleting file.")
+                log.info(_error)
+                raise IOError(_error)
+        return True
             
             
         
