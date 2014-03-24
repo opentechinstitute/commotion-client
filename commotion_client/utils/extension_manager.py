@@ -43,19 +43,21 @@ class ExtensionManager(object):
         """Checks if and extension is installed.
             
         Args:
-          name (type): Name of a extension to check.
+          name (type): Name of a extension to check. If not specified will check if there are any extensions installed.
             
         Returns:
           bool: True if named extension is installed, false, if not.
         """
-        installed_extensions = self.get_installed()
-        if name:
-            if name in installed_extensions["core"]:
-                return True
-            elif name in installed_extensions["contrib"]:
-                return True
-            else:
-                return False
+        installed_extensions = self.get_installed().keys()
+        if name and name in installed_extensions:
+            return True
+        else if not name and installed_extensions:
+            return True
+        else:
+            return False
+
+    def load_all(self):
+        ERRORS_HERE()
         
     @staticmethod
     def get_installed():
@@ -379,7 +381,6 @@ class ExtensionManager(object):
         #There can be only two... and I don't trust you.
         if extension_type != "contrib":
             extension_type = "core"
-
         try:
             unpacked = self.unpack_extension(self, extension, extension_type)
         except IOError:
@@ -398,6 +399,7 @@ class ExtensionManager(object):
             files = unpacked.entryList()
             for file_ in files:
                 if re.match("^.*\.conf$", file_):
+                    config_name = _file
                     config_path = os.path.join(unpacked.absolutePath(), file_)
             _config = config.load_config(config_path)
             existing_extensions = config.find_configs("extension")
@@ -441,7 +443,47 @@ class ExtensionManager(object):
             fs_utils.clean_dir(extension_dir)
             self.remove_extension_settings(_config['name'])
             return False
+        try:
+            self.add_config(unpacked.absolutePath(), config_name)
+        except IOError:
+            self.log.error(self.translate("logs", "Could not add the config to the core config directory."))
+            self.log.info(self.translate("logs", "Cleaning extension directory and settings."))
+            fs_utils.clean_dir(extension_dir)
+            self.remove_extension_settings(_config['name'])
+            return False
         return True
+
+    def add_config(self, extension_dir, name):
+        """Copies a config file to the "loaded" core extension config data folder.
+                       
+        Args:
+          extension_dir (string): The absolute path to the extension directory
+          name (string): The name of the config file
+        
+        Returns:
+          bool: True if successful
+        
+        Raises:
+          IOError: If a config file of the same name already exists or the extension can not be saved.
+        """
+        data_dir = os.path.join(QtCore.QDir.current(), "data")
+        config_dir = os.path.join(data_dir, "extensions")
+        #If the data/extensions folder does not exist, make it.
+        if not QtCore.Qdir(config_dir).exists():
+            QtCore.Qdir(data_dir).mkdir("extensions")
+        source = QtCore.Qdir(extension_dir)
+        s_file = os.path.join(source.path(), name)
+        dest_file = os.path.join(config_dir, name)
+        if source.exists(name):
+            if not QtCore.QFile(s_file).copy(dest_file):
+                _error = QtCore.QCoreApplication.translate("logs", "Error saving extension config. File already exists.")
+                log.info(_error)
+                raise IOError(_error)
+        return True
+
+            
+            
+        
 
     def unpack_extension(self, compressed_extension):
         """Unpacks an extension into a temporary directory and returns the location.
