@@ -1,6 +1,6 @@
 {
-"name":"config_manager",
-"menuItem":"Commotion Config Editor",
+"name":"config_editor",
+"menuItem":"Commotion Config File Editor",
 "parent":"Advanced",
 "settings":"settings",
 "taskbar":"task_bar",
