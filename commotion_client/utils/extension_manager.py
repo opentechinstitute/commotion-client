@@ -51,39 +51,44 @@ class ExtensionManager(object):
         installed_extensions = self.get_installed().keys()
         if name and name in installed_extensions:
             return True
-        else if not name and installed_extensions:
+        elif not name and installed_extensions:
             return True
         else:
             return False
 
     def load_all(self):
+        """Attempts to load all config files saved in the data.extensions directory"""
         installed = self.get_installed()
-        saved = config.get_config_paths("extensions")
+        saved = config.get_config_paths("extension")
+        if not saved:
+            self.log.info(self.translate("logs", "No saved config files found."))
+            return False
         for saved_path in saved:
             _saved_config = config.load_config(saved_path)
-            _main_ext_dir = os.path.join(QtCore.QDir.current(), "extensions")
-            if saved['name'] in installed.keys():
-                _type = installed[saved_config['name']]
+            _main_ext_dir = os.path.join(QtCore.QDir.currentPath(), "extensions")
+            if _saved_config['name'] in installed.keys():
+                _type = installed[_saved_config['name']]
                 _type_dir = os.path.join(main_ext_dir, _type)
             else:
                 _core_dir = QtCore.QDir(os.path.join(_main_ext_dir, "core"))
-                if _core_dir.exists() and _core_dir.exists(saved_config['name']):
+                if _core_dir.exists() and _core_dir.exists(_saved_config['name']):
                     _type = "core"
                     _type_dir = _core_dir
                 else:
                     _contrib_dir = QtCore.QDir(os.path.join(_main_ext_dir, "contrib"))
-                    if _contrib_dir.exists() and _contrib_dir.exists(saved_config['name']):
+                    if _contrib_dir.exists() and _contrib_dir.exists(_saved_config['name']):
                         _type = "contrib"
                         _type_dir = _contrib_dir
                     else:
-                        return False
-            _extension_dir = os.path.join(_type_dir, saved_config['name'])
+                        self.log.warn(self.translate("logs", "There is no corresponding data to accompany the config for extension {0}. It will not be loaded".format(_saved_config['name'])))
+                        break
+            _extension_dir = os.path.join(_type_dir, _saved_config['name'])
             _extension = validate.ClientConfig(config, extension_dir)
             if not _extension.validate_all():
-                self.log.warn(self.translate("logs", "Extension {0}is invalid and cannot be saved.".format(saved_config['name'])))
+                self.log.warn(self.translate("logs", "Extension {0}is invalid and cannot be saved.".format(_saved_config['name'])))
             else:
-                if not self.save_extension(saved['name'], _type):
-                    self.log.warn(self.translate("logs", "Extension {0} could not be saved.".format(saved_config['name'])))
+                if not self.save_extension(_saved_config['name'], _type):
+                    self.log.warn(self.translate("logs", "Extension {0} could not be saved.".format(_saved_config['name'])))
                 
     @staticmethod
     def get_installed():
@@ -133,7 +138,6 @@ class ExtensionManager(object):
         matching_extensions = []
         if value not in self.config_values:
             _error = self.translate("logs", "That is not a valid extension config value.")
-            self.log.error(_error)
             raise KeyError(_error)
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
@@ -174,7 +178,6 @@ class ExtensionManager(object):
         """
         if value not in self.config_values:
             _error = self.translate("logs", "That is not a valid extension config value.")
-            self.log.error(_error)
             raise KeyError(_error)
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
@@ -184,7 +187,6 @@ class ExtensionManager(object):
         setting_value = _settings.value(key)
         if setting_value.isNull():
             _error = self.translate("logs", "The extension config does not contain that value.")
-            self.log.error(_error)
             raise KeyError(_error)
         else:
             return setting_value.toStr()
@@ -254,7 +256,7 @@ class ExtensionManager(object):
         _settings.beginGroup(extension_type)
         extension_config['main'] = _settings.value("main").toString()
         #get extension dir
-        main_ext_dir = os.path.join(QtCore.QtDir.current(), "extensions")
+        main_ext_dir = os.path.join(QtCore.QtDir.currentPath(), "extensions")
         main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
         extension_dir = QtCore.QtDir.mkpath(os.path.join(main_ext_type_dir, config['name']))
         extension_files = extension_dir.entryList()
@@ -263,7 +265,6 @@ class ExtensionManager(object):
                 extension_config['main'] = "main"
             else:
                 _error = self.translate("logs", "Extension {0} does not contain a \"main\" extension file. Please re-load or remove this extension.".format(extension_name))
-                self.log.error(_error)
                 raise IOError(_error)
         extension_config['settings'] = _settings.value("settings", extension_config['main']).toString()
         extension_config['toolbar'] = _settings.value("toolbar", extension_config['main']).toString()
@@ -289,7 +290,6 @@ class ExtensionManager(object):
             _settings.remove(str(name))
         else:
             _error = self.translate("logs", "You must specify an extension name greater than 1 char.")
-            self.log.error(_error)
             raise ValueError(_error)
 
     def save_settings(self, extension_config, extension_type="contrib"):
@@ -302,7 +302,7 @@ class ExtensionManager(object):
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
         #get extension dir
-        main_ext_dir = os.path.join(QtCore.QtDir.current(), "extensions")
+        main_ext_dir = os.path.join(QtCore.QtDir.currentPath(), "extensions")
         main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
         extension_dir = QtCore.QtDir.mkpath(os.path.join(main_ext_type_dir, config['name']))
         #create validator
@@ -448,7 +448,7 @@ class ExtensionManager(object):
             fs_utils.clean_dir(unpacked)
             return False
         #make new directory in extensions
-        main_ext_dir = os.path.join(QtCore.QtDir.current(), "extensions")
+        main_ext_dir = os.path.join(QtCore.QtDir.currentPath(), "extensions")
         main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
         extension_dir = QtCore.QtDir.mkpath(os.path.join(main_ext_type_dir, _config['name']))
         try:
@@ -492,7 +492,7 @@ class ExtensionManager(object):
         Raises:
           IOError: If a config file of the same name already exists or the extension can not be saved.
         """
-        data_dir = os.path.join(QtCore.QDir.current(), "data")
+        data_dir = os.path.join(QtCore.QDir.currentPath(), "data")
         config_dir = os.path.join(data_dir, "extensions")
         #If the data/extensions folder does not exist, make it.
         if not QtCore.Qdir(config_dir).exists():
@@ -503,7 +503,6 @@ class ExtensionManager(object):
         if source.exists(name):
             if not QtCore.QFile(s_file).copy(dest_file):
                 _error = QtCore.QCoreApplication.translate("logs", "Error saving extension config. File already exists.")
-                log.info(_error)
                 raise IOError(_error)
         return True
 
@@ -519,13 +518,12 @@ class ExtensionManager(object):
         Raises:
           IOError: If a config file does not exist in the extension data folder.
         """
-        data_dir = os.path.join(QtCore.QDir.current(), "data")
+        data_dir = os.path.join(QtCore.QDir.currentPath(), "data")
         config_dir = os.path.join(data_dir, "extensions")
         config = os.path.join(config_dir, name)
         if QtCore.QFile(config).exists():
             if not QtCore.QFile(config).remove():
                 _error = QtCore.QCoreApplication.translate("logs", "Error deleting file.")
-                log.info(_error)
                 raise IOError(_error)
         return True
             
@@ -544,11 +542,9 @@ class ExtensionManager(object):
             shutil.unpack_archive(compressed_extension, temp_abs_path, "gztar")
         except ReadError:
             _error = QtCore.QCoreApplication.translate("logs", "Could not load Commotion extension because it was corrupted or mis-packaged.")
-            self.log.error(_error)
             raise IOError(_error)
         except FileNotFoundError:
             _error = QtCore.QCoreApplication.translate("logs", "Could not load Commotion extension because it was not found.")
-            self.log.error(_error)
             raise IOError(_error)
         return temp_dir
 
@@ -583,7 +579,6 @@ class ExtensionManager(object):
                 return False
         else:
             _error = QtCore.QCoreApplication.translate("logs", "An extension with that name already exists. Please delete the existing extension and try again.")
-            self.log.info(_error)
             raise ValueError(_error)
 
 class InvalidSignature(Exception):
