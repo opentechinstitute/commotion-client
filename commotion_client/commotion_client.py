@@ -53,8 +53,9 @@ def get_args():
     parsed_args['message'] = args.message if args.message else False
     #TODO getConfig() #actually want to get this from commotion_config
     parsed_args['logLevel'] = args.verbose if args.verbose else 2
-    #TODO change the logfile to be grabbed from the commotion config reader
-    parsed_args['logFile'] = args.logfile if args.logfile else "temp/logfile.temp" 
+    #TODO change the logfile to be the default logging place for the system
+    default_logfile = os.path.join(args.logfile QtCore.QDir.currentPath(), "logfile")
+    parsed_args['logFile'] = args.logfile if args.logfile else default_logfile
     parsed_args['key'] = ['key'] if args.key else "commotionRocks" #TODO the key is PRIME easter-egg fodder
     parsed_args['status'] = "daemon" if args.daemon else False
     return parsed_args
@@ -73,7 +74,7 @@ def main():
     log = logger.set_logging("commotion_client", args['logLevel'], args['logFile'])
     
     #Create Instance of Commotion Application
-    app = CommotionClientApplication(args['key'], args['status'], sys.argv)
+    app = CommotionClientApplication(args, sys.argv)
 
     #Enable Translations #TODO This code needs to be evaluated to ensure that it is pulling in correct translators
     locale = QtCore.QLocale.system().name()
@@ -90,14 +91,14 @@ def main():
             #Checking for custom message
             msg = args['message']
             app.send_message(msg)
-            log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
+            app.log.info(app.translate("logs", "application is already running, sent following message: \n\"{0}\"".format(msg)))
         else:
-            log.info(app.translate("logs", "application is already running. Application will be brought to foreground"))
+            app.log.info(app.translate("logs", "application is already running. Application will be brought to foreground"))
             app.send_message("showMain")
         app.end("Only one instance of a commotion application may be running at any time.")
 
     sys.exit(app.exec_())
-    log.debug(app.translate("logs", "Shutting down"))
+    app.log.debug(app.translate("logs", "Shutting down"))
 
 class HoldStateDuringRestart(thread.GenericThread):
     """
@@ -107,6 +108,7 @@ class HoldStateDuringRestart(thread.GenericThread):
     def __init__(self):
         super().__init__()
         self.restart_complete = None
+        self.log = logging.getLogger("commotion_client."+__name__)
 
     def end(self):
         self.restart_complete = True
@@ -127,8 +129,12 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
 
     restarted = QtCore.pyqtSignal()
     
-    def __init__(self, key, status, argv):
-        super().__init__(key, argv)
+    def __init__(self, args, argv):
+        super().__init__(args['key'], argv)
+        status = args['status']
+        self.loglevel = args['logLevel']
+        self.logfile = args['logFile']
+        self.log = self.init_logging()
         #Set Application and Organization Information
         self.setOrganizationName("The Open Technology Institute")
         self.setOrganizationDomain("commotionwireless.net")
@@ -164,6 +170,10 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             self.log.exception(_excp)
             self.end(_catch_all)
 
+    def init_logging(self):
+        log = logger.set_logging("commotion_client", self.loglevel, self.logfile)
+        return log
+        
     def start_full(self):
         """
         Start or switch client over to full client.
@@ -497,6 +507,9 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         elif message == "restart":
             self.log.info(self.translate("logs", "Received a message to restart. Restarting Now."))
             self.restart_client(force_close=True) #TODO, might not want strict here post-development
+        elif message == "debug":
+            self.loglevel = 5
+            self.log = self.init_logging()
         else:
             self.log.info(self.translate("logs", "message \"{0}\" not a supported type.".format(message)))
 
