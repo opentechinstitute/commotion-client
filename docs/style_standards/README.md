@@ -55,6 +55,8 @@ Logging should correspond to the following levels:
 
 Exceptions should be logged using the exception handle at the point where they interfeir with the core task. If you wish to add logging at the point where you raise an exception use a debug or info log level to provide information about context around an exception.
 
+tldr: If you raise an exception you should not log it.
+
 ## Exception Handling
 
 
