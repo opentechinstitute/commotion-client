@@ -24,7 +24,7 @@
    <string>Commotion Configuration Manager</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+   <iconset resource="../../../../assets/commotion_assets.qrc">
     <normaloff>:/logo16.png</normaloff>:/logo16.png</iconset>
   </property>
   <property name="toolTip">
@@ -115,7 +115,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -217,7 +217,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -325,7 +325,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -350,7 +350,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_13">
           <item>
-           <widget class="QLabel" name="key_text_entry1">
+           <widget class="QLabel" name="key_text_entry_title">
             <property name="text">
              <string>Key</string>
             </property>
@@ -364,14 +364,14 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_14">
           <item>
-           <widget class="QLabel" name="label_2">
+           <widget class="QLabel" name="key_text_confirm_title_2">
             <property name="text">
              <string>Confirm</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="key_text_entry_2"/>
+           <widget class="QLineEdit" name="key_text_confirm_2"/>
           </item>
          </layout>
         </item>
@@ -438,7 +438,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -543,7 +543,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -646,7 +646,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -767,7 +767,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -871,7 +871,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -957,7 +957,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1043,7 +1043,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1163,7 +1163,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1319,7 +1319,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1408,7 +1408,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1508,7 +1508,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1599,7 +1599,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1690,7 +1690,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1781,7 +1781,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1872,7 +1872,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../../../commotion_client/assets/commotion_assets.qrc">
+             <iconset resource="../../../../assets/commotion_assets.qrc">
               <normaloff>:/filled?20.png</normaloff>:/filled?20.png</iconset>
             </property>
             <property name="iconSize">
@@ -1921,8 +1921,8 @@
   </widget>
  </widget>
  <resources>
-  <include location="../../../../../commotion_client/assets/commotion_assets.qrc"/>
-  <include location="../../../../../commotion_client/assets/commotion_assets.qrc"/>
+  <include location="../../../../assets/commotion_assets.qrc"/>
+  <include location="../../../../assets/commotion_assets.qrc"/>
  </resources>
  <connections/>
 </ui>
