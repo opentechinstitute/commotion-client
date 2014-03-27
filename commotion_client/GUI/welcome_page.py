@@ -19,7 +19,7 @@ import logging
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
-from GUI.ui import Ui_welcome_page
+from commotion_client.GUI.ui import Ui_welcome_page
 
 class ViewPort(Ui_welcome_page.ViewPort):
     """

@@ -28,3 +28,4 @@ commotion_client/data/extensions/*
 
 #compiled clients
 build/exe*
+build/lib

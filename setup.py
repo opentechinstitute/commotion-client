@@ -14,9 +14,8 @@ base = None
 if sys.platform == "win32":
     base = "Win32GUI"
 
-
 #define core packages
-core_pkgs = ["utils", "GUI", "assets"]
+core_pkgs = ["commotion_client", "utils", "GUI", "assets"]
 core_extensions = ["config_editor"]
 packages = []
 assets_file = os.path.join("commotion_client", "assets", "commotion_assets_rc.py")
@@ -25,18 +24,19 @@ assets_file = os.path.join("commotion_client", "assets", "commotion_assets_rc.py
 for ext in core_extensions:
     core_pkgs.append("extensions."+ext)
 
-for pkg in core_pkgs:
-    packages.append("commotion_client."+pkg)
-
 exe = Executable(
-    script=os.path.join("commotion_client", "commotion_client.py"),
+    targetName="Commotion",
+    script="commotion_client/commotion_client.py",
     packages=core_pkgs,
     )
 
 setup(name="Commotion Client",
       version="1.0",
+#      packages=["commotion_client"],
+#      include_dirs=['commotion_client'],
+#      ext_modules=[Extension("Commotion Client", ['commotion_client'])],
       url="commotionwireless.net",
       license="Affero General Public License V3 (AGPLv3)",
       executables = [exe],
-      options = {"build_exe":{ "include_files":[] }}
+      options = {"build_exe":{"include_files": [(assets_file, "commotion_assets_rc.py")]}}
   )

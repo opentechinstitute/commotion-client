@@ -21,8 +21,8 @@ import os
 from PyQt4 import QtCore
 
 #Commotion Client Imports
-from utils import fs_utils
-from utils import config
+from commotion_client.utils import fs_utils
+from commotion_client.utils import config
 
 class ClientConfig(object):
 

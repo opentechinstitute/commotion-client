@@ -22,10 +22,10 @@ import re
 from PyQt4 import QtCore
 
 #Commotion Client Imports
-from utils import config
-from utils import fs_utils
-from utils import validate
-import extensions
+from commotion_client.utils import config
+from commotion_client.utils import fs_utils
+from commotion_client.utils import validate
+from commotion_client import extensions
 
 class ExtensionManager(object):
     def __init__(self):

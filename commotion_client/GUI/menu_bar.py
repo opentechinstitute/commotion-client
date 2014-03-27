@@ -21,8 +21,8 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 #Commotion Client Imports
-from utils import config
-from utils.extension_manager import ExtensionManager
+from commotion_client.utils import config
+from commotion_client.utils.extension_manager import ExtensionManager
 
 class MenuBar(QtGui.QWidget):
 

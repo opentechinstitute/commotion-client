@@ -19,12 +19,12 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 #Commotion Client Imports
-from assets import commotion_assets_rc
-from GUI.menu_bar import MenuBar
-from GUI.crash_report import CrashReport
-from GUI import welcome_page
-from utils import config
-from utils import extension_manager
+from commotion_client.assets import commotion_assets_rc
+from commotion_client.GUI.menu_bar import MenuBar
+from commotion_client.GUI.crash_report import CrashReport
+from commotion_client.GUI import welcome_page
+from commotion_client.utils import config
+from commotion_client.utils import extension_manager
 
 class MainWindow(QtGui.QMainWindow):
     """

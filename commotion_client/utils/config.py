@@ -14,7 +14,7 @@ import logging
 
 from PyQt4 import QtCore
 
-from utils import fs_utils
+from commotion_client.utils import fs_utils
 
 #set function logger
 log = logging.getLogger("commotion_client."+__name__) #TODO commotion_client is still being called directly from one level up so it must be hard coded as a sub-logger if called from the command line.

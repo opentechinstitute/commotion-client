@@ -21,13 +21,13 @@ import logging
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
-from utils import logger
-from utils import thread
-from utils import single_application
-from utils import extension_manager
+from commotion_client.utils import logger
+from commotion_client.utils import thread
+from commotion_client.utils import single_application
+from commotion_client.utils import extension_manager
 
-from GUI import main_window
-from GUI import system_tray
+from commotion_client.GUI import main_window
+from commotion_client.GUI import system_tray
 
 #from controller import CommotionController #TODO Create Controller
 
