@@ -24,6 +24,8 @@ from PyQt4 import QtCore
 from utils import logger
 from utils import thread
 from utils import single_application
+from utils import extension_manager
+
 from GUI import main_window
 from GUI import system_tray
 
@@ -166,6 +168,9 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         """
         Start or switch client over to full client.
         """
+        extensions = extension_manager.ExtensionManager()
+        if not extensions.check_installed():
+            extensions.load_all()
         if not self.main:
             try:
                 self.main = self.create_main_window()
@@ -272,7 +277,6 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             _main = main_window.MainWindow()
         except Exception as _excp:
             self.log.critical(self.translate("logs", "Could not create Main Window. Application must be halted."))
-            self.log.exception(_excp)
             raise
         else:
             return _main
