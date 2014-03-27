@@ -25,3 +25,6 @@ Ui_*.py
 
 #Extension Application Data
 commotion_client/data/extensions/*
+
+#compiled clients
+build/exe*
