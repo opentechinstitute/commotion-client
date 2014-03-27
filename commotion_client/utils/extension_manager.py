@@ -16,6 +16,7 @@ import logging
 import importlib
 import shutil
 import os
+import re
 
 #PyQt imports
 from PyQt4 import QtCore
@@ -38,6 +39,10 @@ class ExtensionManager(object):
                               "parent",
                               "settings",
                               "toolbar"]
+        self.extension_dirs = {
+            "user" : os.path.join(QtCore.QDir.homePath(), ".commotion/extensions"),
+            "global" :os.path.join(QtCore.QDir.currentPath(), "extensions")
+        }
 
     def check_installed(self, name=None):
         """Checks if and extension is installed.
@@ -57,39 +62,44 @@ class ExtensionManager(object):
             return False
 
     def load_all(self):
-        """Attempts to load all config files saved in the data.extensions directory"""
+        """Loads all extensions in the user and global extension directories.
+        
+        This function bootstraps the Commotion client when the settings are not populated on first boot or due to error. It iterates through all extensions that should be loaded for a user and adds them to the settings. NOTE: Does not do any validation as it relies on save_settings to validate all fields.
+
+        Returns:
+          List of names (strings) of extensions loaded  on success. Returns False (bool) on failure.
+        """
         installed = self.get_installed()
-        saved = config.get_config_paths("extension")
-        if not saved:
-            self.log.info(self.translate("logs", "No saved config files found."))
+        exist = config.get_config_paths("extension")
+        if not exist:
+            self.log.info(self.translate("logs", "No extensions found."))
             return False
-        for saved_path in saved:
-            _saved_config = config.load_config(saved_path)
-            _main_ext_dir = os.path.join(QtCore.QDir.currentPath(), "extensions")
-            if _saved_config['name'] in installed.keys():
-                _type = installed[_saved_config['name']]
-                _type_dir = os.path.join(main_ext_dir, _type)
-            else:
-                _core_dir = QtCore.QDir(os.path.join(_main_ext_dir, "core"))
-                if _core_dir.exists() and _core_dir.exists(_saved_config['name']):
-                    _type = "core"
-                    _type_dir = _core_dir
+        for config_path in exist:
+            _config = config.load_config(config_path)
+            if _config['name'] in installed.keys():
+                _type = installed[_config['name']]
+                if _type == "global":
+                    _ext_dir = os.path.join(self.extension_dir['global'], _config['name'])
+                elif _type == "user":
+                    _ext_dir = os.path.join(self.extension_dir['user'], _config['name'])
                 else:
-                    _contrib_dir = QtCore.QDir(os.path.join(_main_ext_dir, "contrib"))
-                    if _contrib_dir.exists() and _contrib_dir.exists(_saved_config['name']):
-                        _type = "contrib"
-                        _type_dir = _contrib_dir
-                    else:
-                        self.log.warn(self.translate("logs", "There is no corresponding data to accompany the config for extension {0}. It will not be loaded".format(_saved_config['name'])))
-                        break
-            _extension_dir = os.path.join(_type_dir, _saved_config['name'])
-            _extension = validate.ClientConfig(config, extension_dir)
-            if not _extension.validate_all():
-                self.log.warn(self.translate("logs", "Extension {0}is invalid and cannot be saved.".format(_saved_config['name'])))
+                    self.log.warn(self.translate("logs", "Extension {0} is of an unknown type. It will not be loaded".format(_config['name'])))
+                    continue
             else:
-                if not self.save_extension(_saved_config['name'], _type):
-                    self.log.warn(self.translate("logs", "Extension {0} could not be saved.".format(_saved_config['name'])))
+                if QtCore.QDir(self.extension_dir['user']).exists(_config['name']):
+                    _ext_dir = os.path.join(self.extension_dir['user'], _config['name'])
+                elif QtCore.QDir(self.extension_dir['global']).exists(_config['name']):
+                    _ext_dir = os.path.join(self.extension_dir['global'], _config['name'])
+                else:
+                    self.log.warn(self.translate("logs", "There is no corresponding data to accompany the config for extension {0}. It will not be loaded".format(_config['name'])))
+                    continue
+            if not self.save_settings(_config, _type):
+                self.log.warn(self.translate("logs", "Extension {0} could not be saved.".format(_config['name'])))
+            else:
+                saved.append(_config['name'])
+        return saved or False
                 
+
     @staticmethod
     def get_installed():
         """Get all installed extensions seperated by type.
@@ -97,26 +107,20 @@ class ExtensionManager(object):
         Pulls the current installed extensions from the application settings and returns a dictionary with the lists of the two extension types.
 
         Returns:
-          A dictionary with two keys ['core' and 'contrib'] that both have lists of all extensions of that type as their values.
+          A dictionary keyed by the names of all extensions with the values being if they are a user extension or a global extension.
 
-          {'core':['coreExtensionOne', 'coreExtensionTwo'],
-           'contrib':['contribExtension', 'anotherContrib']}
+          {'coreExtensionOne':"user", 'coreExtensionTwo':"global",
+           'contribExtension':"global", 'anotherContrib':"global"}
 
         """
+        WRITE_TESTS_FOR_ME()
         installed_extensions = {}
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
-        _settings.beginGroup("core")
-        core = _settings.allKeys()
+        extensions = _settings.allKeys()
+        for ext in extensions:
+            installed_extensions[ext] = _settings.value(ext+"/type").toString()
         _settings.endGroup()
-        _settings.beginGroup("contrib")
-        contrib = _settings.allKeys()
-        _settings.endGroup()
-        _settings.endGroup()
-        for ext in core:
-            installed_extensions[ext] = "core"
-        for ext in contrib:
-            installed_extensions[ext] = "contrib"
         return installed_extensions
 
     def get_extension_from_property(self, key, val):
@@ -135,6 +139,8 @@ class ExtensionManager(object):
         Raises:
           KeyError: If the value requested is non-standard.
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         matching_extensions = []
         if value not in self.config_values:
             _error = self.translate("logs", "That is not a valid extension config value.")
@@ -176,6 +182,8 @@ class ExtensionManager(object):
         Raises:
           KeyError: If the value requested is non-standard.
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         if value not in self.config_values:
             _error = self.translate("logs", "That is not a valid extension config value.")
             raise KeyError(_error)
@@ -203,6 +211,8 @@ class ExtensionManager(object):
         Raises:
           KeyError: If an extension does not exist.
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
         core_ext = _settings.value("core/"+str(name))
@@ -221,6 +231,8 @@ class ExtensionManager(object):
         @param extension_name string The extension to load
         @subsection string Name of a objects sub-section. (settings, main, or toolbar)
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         user_interface_types = {'main': "ViewPort", "setttings":"SettingsMenu", "toolbar":"ToolBar"}
         settings = self.load_settings(extension_name)
         if subsection:
@@ -237,6 +249,8 @@ class ExtensionManager(object):
         @param extension_name string The extension to load
         @param subsection string The module to load from an extension
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         if subsection:
             extension = importlib.import_module("."+subsection, "extensions."+extension_name)
         else:
@@ -248,6 +262,8 @@ class ExtensionManager(object):
 
         @return dict A dictionary containing an extensions properties.
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         extension_config = {"name":extension_name}
         extension_type = self.extensions[extension_name]
         
@@ -256,9 +272,9 @@ class ExtensionManager(object):
         _settings.beginGroup(extension_type)
         extension_config['main'] = _settings.value("main").toString()
         #get extension dir
-        main_ext_dir = os.path.join(QtCore.QtDir.currentPath(), "extensions")
+        main_ext_dir = os.path.join(QtCore.QDir.currentPath(), "extensions")
         main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
-        extension_dir = QtCore.QtDir.mkpath(os.path.join(main_ext_type_dir, config['name']))
+        extension_dir = QtCore.QDir.mkpath(os.path.join(main_ext_type_dir, config['name']))
         extension_files = extension_dir.entryList()
         if not extension_config['main']:
             if "main.py" in extension_files:
@@ -284,6 +300,8 @@ class ExtensionManager(object):
 
         @param name str the name of an extension to remove from the extension settings.
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         if len(str(name)) > 0:
             _settings = QtCore.QSettings()
             _settings.beginGroup("extensions")
@@ -292,19 +310,30 @@ class ExtensionManager(object):
             _error = self.translate("logs", "You must specify an extension name greater than 1 char.")
             raise ValueError(_error)
 
-    def save_settings(self, extension_config, extension_type="contrib"):
-        """Saves an extensions core properties into the applications extension settings
-
-        @param extension_type string Type of extension "contrib" or "core". Defaults to contrib.
-        @param extension_config dict Dictionary of key-pairs for json config.
-        @return bool True if successful and False on failures
+    def save_settings(self, extension_config, extension_type="global"):
+        """Saves an extensions core properties into the applications extension settings.
+        
+        long description
+        
+        Args:
+          extension_config (dict) An extension config in dictionary format.
+          extension_type (string): Type of extension "user" or "global". Defaults to global.
+        
+        Returns:
+          bool: True if successful, False on failures
+        
+        Raises:
+        exception: Description.
+        
         """
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
         #get extension dir
-        main_ext_dir = os.path.join(QtCore.QtDir.currentPath(), "extensions")
-        main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
-        extension_dir = QtCore.QtDir.mkpath(os.path.join(main_ext_type_dir, config['name']))
+        try:
+            extension_dir = self.extension_dirs[extension_type]
+        except KeyError:
+            self.log.warn(self.translate("logs", "Invalid extension type. Please check the extension type and try again."))
+            return False
         #create validator
         config_validator = validate.ClientConfig(extension_config, extension_dir)
         #Extension Name
@@ -393,25 +422,42 @@ class ExtensionManager(object):
             _error = self.translate("logs", "Extension {0} does not contain the {1} file listed in the config for its tests. Please either remove the listing to allow for the default value, or add the appropriate file.".format(extension_config['name'], _config_value))
             self.log.error(_error)
             return False
-        _settings.endGroup()
+        #Write extension type
+        _settings.value("type", extension_type)
         _settings.endGroup()
         return True
 
-    def save_extension(self, extension, extension_type="contrib"):
-        """Unpacks a extension and attempts to add it to the Commotion system.
+    def save_extension(self, extension, extension_type="contrib", unpack=None):
+        """Attempts to add an extension to the Commotion system.
 
-        @param extension
-        @param extension_type string Type of extension "contrib" or "core". Defaults to contrib.
-        @return bool True if an extension was saved, False if it could not save.
+        Args:
+          extension (string): The name of the extension
+          extension_type (string): Type of extension "contrib" or "core". Defaults to contrib.
+          unpack (string or QDir): Path to compressed extension
+        
+        Returns:
+          bool True if an extension was saved, False if it could not save.
+        
+        Raises:
+        exception: Description.
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         #There can be only two... and I don't trust you.
         if extension_type != "contrib":
             extension_type = "core"
-        try:
-            unpacked = self.unpack_extension(self, extension, extension_type)
-        except IOError:
-            self.log.error(self.translate("logs", "Failed to unpack extension."))
-            return False
+        if unpack:
+            try:
+                unpacked = QtCore.QDir(self.unpack_extension(unpack))
+            except IOError:
+                self.log.error(self.translate("logs", "Failed to unpack extension."))
+                return False
+        else:
+            self.log.info(self.translate("logs", "Saving non-compressed extension."))
+            main_ext_dir = os.path.join(QtCore.QDir.currentPath(), "extensions")
+            main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
+            unpacked = QtCore.QDir(os.path.join(main_ext_type_dir, extension))
+            unpacked.mkpath(unpacked.absolutePath())
         config_validator = validate.ClientConfig()
         try:
             config_validator.set_extension(unpacked.absolutePath())
@@ -425,7 +471,7 @@ class ExtensionManager(object):
             files = unpacked.entryList()
             for file_ in files:
                 if re.match("^.*\.conf$", file_):
-                    config_name = _file
+                    config_name = file_
                     config_path = os.path.join(unpacked.absolutePath(), file_)
             _config = config.load_config(config_path)
             existing_extensions = config.find_configs("extension")
@@ -433,48 +479,59 @@ class ExtensionManager(object):
                 assert _config['name'] not in existing_extensions
             except AssertionError:
                 self.log.error(self.translate("logs", "The name given to this extension is already in use. Each extension must have a unique name."))
-                self.log.info(self.translate("logs", "Cleaning extension's temp directory."))
-                fs_utils.clean_dir(unpacked)
+                if unpack:
+                    self.log.info(self.translate("logs", "Cleaning extension's temp directory."))
+                    fs_utils.clean_dir(unpacked)
                 return False
         else:
             self.log.error(self.translate("logs", "The extension name is invalid and cannot be saved."))
-            self.log.info(self.translate("logs", "Cleaning extension's temp directory."))
-            fs_utils.clean_dir(unpacked)
+            if unpack:
+                self.log.info(self.translate("logs", "Cleaning extension's temp directory."))
+                fs_utils.clean_dir(unpacked)
             return False
         #Check all values
         if not config_validator.validate_all():
             self.log.error(self.translate("logs", "The extension's config contains the following invalid value/s: [{0}]".format(",".join(config_validator.errors))))
-            self.log.info(self.translate("logs", "Cleaning extension's temp directory."))
-            fs_utils.clean_dir(unpacked)
+            if unpack:
+                self.log.info(self.translate("logs", "Cleaning extension's temp directory."))
+                fs_utils.clean_dir(unpacked)
             return False
         #make new directory in extensions
-        main_ext_dir = os.path.join(QtCore.QtDir.currentPath(), "extensions")
+        main_ext_dir = os.path.join(QtCore.QDir.currentPath(), "extensions")
         main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
-        extension_dir = QtCore.QtDir.mkpath(os.path.join(main_ext_type_dir, _config['name']))
-        try:
-            fs_utils.copy_contents(unpacked, extension_dir)
-        except IOError:
-            self.log.error(self.translate("logs", "Could not move extension into main extensions directory from temporary storage. Please try again."))
-            self.log.info(self.translate("logs", "Cleaning extension's temp and main directory."))
-            fs_utils.clean_dir(extension_dir)
-            fs_utils.clean_dir(unpacked)
-            return False
-        else:
-            fs_utils.clean_dir(unpacked)
+        extension_dir = QtCore.QDir(os.path.join(main_ext_type_dir, _config['name']))
+        extension_dir.mkdir(extension_dir.path())
+        if unpack:
+            try:
+                fs_utils.copy_contents(unpacked, extension_dir)
+            except IOError:
+                self.log.error(self.translate("logs", "Could not move extension into main extensions directory from temporary storage. Please try again."))
+                if unpack:
+                    self.log.info(self.translate("logs", "Cleaning extension's temp and main directory."))
+                    fs_utils.clean_dir(extension_dir)
+                    fs_utils.clean_dir(unpacked)
+                return False
+            else:
+                if unpack:
+                    fs_utils.clean_dir(unpacked)
         try:
             self.save_settings(_config, extension_type)
         except KeyError:
             self.log.error(self.translate("logs", "Could not save the extension because it was missing manditory values. Please check the config and try again."))
-            self.log.info(self.translate("logs", "Cleaning extension directory and settings."))
-            fs_utils.clean_dir(extension_dir)
+            if unpack:
+                self.log.info(self.translate("logs", "Cleaning extension directory."))
+                fs_utils.clean_dir(extension_dir)
+            self.log.info(self.translate("logs", "Cleaning settings."))
             self.remove_extension_settings(_config['name'])
             return False
         try:
             self.add_config(unpacked.absolutePath(), config_name)
         except IOError:
             self.log.error(self.translate("logs", "Could not add the config to the core config directory."))
-            self.log.info(self.translate("logs", "Cleaning extension directory and settings."))
-            fs_utils.clean_dir(extension_dir)
+            if unpack:
+                self.log.info(self.translate("logs", "Cleaning extension directory and settings."))
+                fs_utils.clean_dir(extension_dir)
+                self.log.info(self.translate("logs", "Cleaning settings."))
             self.remove_extension_settings(_config['name'])
             return False
         return True
@@ -492,6 +549,8 @@ class ExtensionManager(object):
         Raises:
           IOError: If a config file of the same name already exists or the extension can not be saved.
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         data_dir = os.path.join(QtCore.QDir.currentPath(), "data")
         config_dir = os.path.join(data_dir, "extensions")
         #If the data/extensions folder does not exist, make it.
@@ -518,6 +577,8 @@ class ExtensionManager(object):
         Raises:
           IOError: If a config file does not exist in the extension data folder.
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         data_dir = os.path.join(QtCore.QDir.currentPath(), "data")
         config_dir = os.path.join(data_dir, "extensions")
         config = os.path.join(config_dir, name)
@@ -534,19 +595,21 @@ class ExtensionManager(object):
         """Unpacks an extension into a temporary directory and returns the location.
 
         @param compressed_extension string Path to the compressed_extension
-        @return QDir A QDir object containing the path to the temporary directory
+        @return A string object containing the absolute path to the temporary directory
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         temp_dir = fs_utils.make_temp_dir(new=True)
         temp_abs_path = temp_dir.absolutePath()
         try:
             shutil.unpack_archive(compressed_extension, temp_abs_path, "gztar")
-        except ReadError:
+        except FileNotFoundError:
             _error = QtCore.QCoreApplication.translate("logs", "Could not load Commotion extension because it was corrupted or mis-packaged.")
             raise IOError(_error)
         except FileNotFoundError:
             _error = QtCore.QCoreApplication.translate("logs", "Could not load Commotion extension because it was not found.")
             raise IOError(_error)
-        return temp_dir
+        return temp_dir.absolutePath()
 
     def save_unpacked_extension(self, temp_dir, extension_name, extension_type):
         """Moves an extension from a temporary directory to the extension directory.
@@ -562,6 +625,8 @@ class ExtensionManager(object):
         Raises:
           ValueError: If an extension with that name already exists. 
         """
+        WRITE_TESTS_FOR_ME()
+        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         extension_path = "extensions/"+extension_type+"/"+extension_name
         full_path = os.path.join(QtCore.QDir.currentPath(), extension_path)
         if not fs_utils.is_file(full_path):

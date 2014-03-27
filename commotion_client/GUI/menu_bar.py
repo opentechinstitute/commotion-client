@@ -40,7 +40,7 @@ class MenuBar(QtGui.QWidget):
         try:
             self.populate_menu()
         except (NameError, AttributeError) as _excpt:
-            self.log.exception(_excpt)
+            self.log.info(self.translate("logs", "The Menu Bar could not populate the menu"))
             raise
         self.log.debug(QtCore.QCoreApplication.translate("logs", "Menu bar has initalized successfully."))
 
@@ -71,10 +71,14 @@ class MenuBar(QtGui.QWidget):
         if not self.layout.isEmpty():
             self.clear_layout(self.layout)
         menu_items = {}
-        extensions = ExtensionManager.get_installed()
-        all_extensions = extensions['core'] + extensions['contrib']
+        ext_mgr = ExtensionManager()
+        extensions = ext_mgr.get_installed().keys()
+        if not extensions:
+            ext_mgr.load_all()
+            extensions = ext_mgr.get_installed().keys()
+
         if extensions:
-            top_level = self.get_parents(all_extensions)
+            top_level = self.get_parents(extensions)
             for top_level_item in top_level:
                 try:
                     current_item = self.add_menu_item(top_level_item)
@@ -91,10 +95,8 @@ class MenuBar(QtGui.QWidget):
                     #Add sub-menu layout
                     self.layout.addWidget(section[1])
             else:
-                self.log.error(QtCore.QCoreApplication.translate("logs", "No menu items could be created from the extensions found. Please re-run the commotion client with full verbosity to identify what went wrong."))
                 raise AttributeError(QtCore.QCoreApplication.translate("exception", "No menu items could be created from the extensions found. Please re-run the commotion client with full verbosity to identify what went wrong."))
         else:
-            self.log.error(QtCore.QCoreApplication.translate("logs", "No extensions found. Please re-run the commotion_client with full verbosity to find out what went wrong."))
             raise NameError(QtCore.QCoreApplication.translate("exception", "No extensions found. Please re-run the commotion_client with full verbosity to find out what went wrong."))
         self.setLayout(self.layout)
         

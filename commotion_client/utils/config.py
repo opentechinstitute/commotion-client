@@ -52,10 +52,10 @@ def get_config_paths(config_type):
     config_files = []
     
     try:
-        path = configLocations[config_type]
+        path = os.path.join(QtCore.QDir.currentPath(), configLocations[config_type])
     except KeyError as _excp:
-        log.error(QtCore.QCoreApplication.translate("logs", "Cannot search for config type {0} as it is an unsupported type.".format(config_type)))
-        self.log.exception(_excp)
+        log.warn(QtCore.QCoreApplication.translate("logs", "Cannot search for config type {0} as it is an unsupported type.".format(config_type)))
+        log.exception(_excp)
         return False
     try:
         for root, dirs, files in fs_utils.walklevel(path):
@@ -64,10 +64,10 @@ def get_config_paths(config_type):
                     config_files.append(os.path.join(root, file_name))
     except AssertionError as _excp:
         log.error(QtCore.QCoreApplication.translate("logs", "Config file folder at path {0} does not exist. No Config files loaded.".format(path)))
-        self.log.exception(_excp)
+        log.exception(_excp)
     except TypeError as _excp:
         log.error(QtCore.QCoreApplication.translate("logs", "No config files found at path {0}. No Config files loaded.".format(path)))
-        self.log.exception(_excp)
+        log.exception(_excp)
     if config_files:
         return config_files
     else:
@@ -101,24 +101,24 @@ def load_config(config):
     try:
         f = open(config, mode='r', encoding="utf-8", errors="strict")
     except ValueError as _excp:
-        log.error(QtCore.QCoreApplication.translate("logs", "Config files must be in utf-8 format to avoid data loss. The config file {0} is improperly formatted ".format(config)))
-        self.log.exception(_excp)
+        log.warn(QtCore.QCoreApplication.translate("logs", "Config files must be in utf-8 format to avoid data loss. The config file {0} is improperly formatted ".format(config)))
+        log.exception(_excp)
         return False
-    except Exception as _excp:
-        log.error(QtCore.QCoreApplication.translate("logs", "An unknown error has occured in opening config file {0}. Please check that this file exists and is not corrupted.".format(config)))
-        self.log.exception(_excp)
+    except TypeError as _excp:
+        log.warn(QtCore.QCoreApplication.translate("logs", "An unknown error has occured in opening config file {0}. Please check that this file is the correct type.".format(config)))
+        log.exception(_excp)
         return False
     else:
         tmpMsg = f.read()
     #Parse the JSON
     try:
         data = json.loads(tmpMsg)
-        log.debug(QtCore.QCoreApplication.translate("logs", "Successfully loaded {0}".format(config)))
+        log.info(QtCore.QCoreApplication.translate("logs", "Successfully loaded {0}".format(config)))
         return data
     except ValueError as _excp:
-        log.error(QtCore.QCoreApplication.translate("logs", "Failed to load {0} due to a non-json or otherwise invalid file type".format(config)))
-        self.log.exception(_excp)
+        log.warn(QtCore.QCoreApplication.translate("logs", "Failed to load {0} due to a non-json or otherwise invalid file type".format(config)))
+        log.exception(_excp)
         return False
     except Exception as _excp:
-        log.error(QtCore.QCoreApplication.translate("logs", "Failed to load {0} due to an unknown error.".format(config)))
-        self.log.exception(_excp)
+        log.warn(QtCore.QCoreApplication.translate("logs", "Failed to load {0} due to an unknown error.".format(config)))
+        log.exception(_excp)

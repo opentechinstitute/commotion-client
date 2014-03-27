@@ -22,31 +22,43 @@ from PyQt4 import QtCore
 
 #Commotion Client Imports
 from utils import fs_utils
+from utils import config
 
 class ClientConfig(object):
 
-    def __init__(self, config=None, directory=None):
-        if config:
-            self._config = config.load_config(config)
+    def __init__(self, ext_config=None, directory=None):
+        """
+        Args:
+          ext_config (string): Absolute Path to the config file.
+          directory (string): Absolute Path to the directory containing the extension.
+        """
+        if ext_config:
+            if fs_utils.is_file(ext_config):
+                self._config = config.load_config(ext_config)
+            else:
+                raise IOError(self.translate("logs", "Extension does not contain a config file and is therefore invalid."))
         self._directory = QtCore.QDir(directory)
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
         self.errors = None
-
-    def set_extension(self, directory, config=None):
+        
+    def set_extension(self, directory, ext_config=None):
         """Set the default values
 
         @param config string The absolute path to a config file for this extension
         @param directory string The absolute path to this extensions directory
         """
         self._directory = QtCore.QDir(directory)
-        if config:
-            self._config = config.load_config(config)
+        if ext_config:
+            if fs_utils.is_file(ext_config):
+                self._config = config.load_config(ext_config)
+            else:
+                raise IOError(self.translate("logs", "Extension does not contain a config file and is therefore invalid."))
         else:
             files = self._directory.entryList()
             for file_ in files:
                 if re.match("^.*\.conf$", file_):
-                    default_config_path = os.path.join(self._directory, file_)
+                    default_config_path = os.path.join(self._directory.path(), file_)
             try:
                 assert default_config_path
             except NameError:
@@ -71,17 +83,23 @@ class ClientConfig(object):
         errors = []
         if not self.name():
             errors.append("name")
+            self.log.info(self.translate("logs", "The name of extension {0} is invalid.".format(self._config['name'])))
         if not self.tests():
             errors.append("tests")
+            self.log.info(self.translate("logs", "The extensions {0} tests is invalid.".format(self._config['name'])))
         if not self.menu_level():
             errors.append("menu_level")
+            self.log.info(self.translate("logs", "The extensions {0} menu_level is invalid.".format(self._config['name'])))
         if not self.menu_item():
             errors.append("menu_item")
+            self.log.info(self.translate("logs", "The extensions {0} menu_item is invalid.".format(self._config['name'])))
         if not self.parent():
-            errors.append("parent")        
+            errors.append("parent")
+            self.log.info(self.translate("logs", "The extensions {0} parent is invalid.".format(self._config['name'])))
         else:
             for gui_name in ['main', 'settings', 'toolbar']:
                 if not self.gui(gui_name):
+                    self.log.info(self.translate("logs", "The extensions {0} {1} is invalid.".format(self._config['name'], gui_name)))
                     errors.append(gui_name)
         if errors:
             self.errors = errors
@@ -181,8 +199,7 @@ class ClientConfig(object):
             self.log.warn(self.translate("logs", "The extensions 'tests' file name is invalid for this system."))
             return False
         if not self.check_exists(file_name):
-            self.log.warn(self.translate("logs", "The extensions 'tests' file does not exist."))
-            return False
+            self.log.info(self.translate("logs", "The extensions 'tests' file does not exist. But tests are not required. Shame on you though, SHAME!."))
         return True
         
     def check_menu_text(self, menu_text):
@@ -191,9 +208,11 @@ class ClientConfig(object):
 
         @param menu_text string The text that will appear in the menu.
         """
-        if not 3 < len(str(menu_text)) > 40:
+        if not 3 < len(str(menu_text)) < 40:
             self.log.warn(self.translate("logs", "Menu items must be between 3 and 40 chars long. Becuase it looks prettier that way."))
             return False
+        else:
+            return True
             
     def check_exists(self, file_name):
         """Checks if a specified file exists within a directory
@@ -202,7 +221,7 @@ class ClientConfig(object):
         """
         files = QtCore.QDir(self._directory).entryList()
         if not str(file_name) in files:
-            self.log.warn(self.translate("logs", "The specified file does not exist."))
+            self.log.warn(self.translate("logs", "The specified file '{0}' does not exist.".format(file_name)))
             return False
         else:
             return True
@@ -254,19 +273,19 @@ class ClientConfig(object):
         # Win(name+path<=260),
         path_limit = ['win32', 'cygwin']
         if platform in path_limit:
-            if self.name(): #check valid name before using it
-                extension_path = os.path.join(QtCore.QDir.currentPath(), "extensions")
-                full_path = os.path.join(extension_path, file_name)
-            else:
-                self.log.warn(self.translate("logs", "The extension's config file 'main' value requires a valid 'name' value. Which this extension does not have."))
-                return False
+            extension_path = os.path.join(QtCore.QDir.currentPath(), "extensions")
+            full_path = os.path.join(extension_path, file_name)
             if len(str(full_path)) > 255:
                 self.log.warn(self.translate("logs", "The full extension path cannot be greater than 260 chars"))
                 return False
+            else:
+                return True
         elif platform in name_limit:
             if len(str(file_name)) >= 260:
                 self.log.warn(self.translate("logs", "File names can not be greater than 260 chars on your system"))
                 return False
+            else:
+                return True
         else:
             self.log.warn(self.translate("logs", "Your system, {0} is not recognized. This may cause instability if file or path names are longer than your system allows.").format(platform))
             return True

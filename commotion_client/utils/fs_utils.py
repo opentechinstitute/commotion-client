@@ -17,10 +17,8 @@ import uuid
 
 def is_file(unknown):
     """
-	Determines if a file is accessable. It does NOT check to see if the file contains any data.
-	"""
-    #stolen from https://github.com/isislovecruft/python-gnupg/blob/master/gnupg/_util.py
-    #set function logger
+    Determines if a file is accessable. It does NOT check to see if the file contains any data.
+    """
     log = logging.getLogger("commotion_client."+__name__)
     try:
         assert os.lstat(unknown).st_size > 0, "not a file: %s" % unknown
@@ -50,19 +48,19 @@ def make_temp_dir(new=None):
     @param new bool Create a new uniquely named directory within the exiting Commotion temp directory and return the new folder object
     """
     log = logging.getLogger("commotion_client."+__name__)
-    temp_path = "/Commotion/"
+    temp_path = "Commotion"
+    temp_dir = QtCore.QDir.tempPath()
     if new:
         unique_dir_name = uuid.uuid4()
-        temp_path += str(unique_dir_name)
-#    temp_dir = QtCore.QDir(QtCore.QDir.tempPath() + temp_path)
-    temp_dir = QtCore.QDir(os.path.join(QtCore.QDir.tempPath(), temp_path))
-    if QtCore.QDir().mkpath(temp_dir.path()):
+        temp_path = os.path.join(temp_path, str(unique_dir_name))
+    temp_full = QtCore.QDir(os.path.join(temp_dir, temp_path))
+    if temp_full.mkpath(temp_full.path()):
         log.debug(QtCore.QCoreApplication.translate("logs", "Creating main temporary directory"))
     else:
         _error = QtCore.QCoreApplication.translate("logs", "Error creating temporary directory")
-        log.error(_error)
+        log.debug(_error)
         raise IOError(_error)
-    return temp_dir
+    return temp_full
 
 
 def clean_dir(path=None):
