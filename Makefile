@@ -10,7 +10,6 @@ extensions:
 build: clean
 	python3.3 build/build.py build
 	pyrcc4 -py3 commotion_client/assets/commotion_assets.qrc -o commotion_client/assets/commotion_assets_rc.py
-	cxfreeze commotion_client.py --base-name=commotion_client 
 
 test: clean build
 	@echo "test build complete"
@@ -21,10 +20,16 @@ windows:
 osx:
 	@echo "macintosh saddening is not yet implemented"
 
+linux: clean_linux build
+	python3.3 setup.py build
+
+clean_linux:
+	rm -fr build/exe.linux-x86_64-3.3/ || true
+
 debian:
 	@echo "debian packaging is not yet implemented"
 
-clean:
+clean: clean_linux
 	python3.3 build/build.py clean
 	rm commotion_client/assets/commotion_assets_rc.py || true
 	rm commotion_client/commotion_assets_rc.py || true
