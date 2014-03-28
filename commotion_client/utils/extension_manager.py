@@ -30,8 +30,8 @@ from commotion_client import extensions
 class ExtensionManager(object):
     def __init__(self):
         self.log = logging.getLogger("commotion_client."+__name__)
-        self.extensions = self.check_installed()
         self.translate = QtCore.QCoreApplication.translate
+        self.set_extension_dir_defaults()
         self.config_values = ["name",
                               "main",
                               "menu_item",
@@ -39,11 +39,69 @@ class ExtensionManager(object):
                               "parent",
                               "settings",
                               "toolbar"]
-        self.extension_dirs = {
-            "user" : os.path.join(QtCore.QDir.homePath(), ".commotion/extensions"),
-            "global" :os.path.join(QtCore.QDir.currentPath(), "extensions")
-        }
+        self.extensions = self.check_installed()
 
+    def set_extension_dir_defaults(self):
+        """Sets self.extension_dirs dictionary for user and global extension directories to system defaults.
+        
+        Creates an extension folder, if it does not exit, in the operating systems default application data directories for the current user and for the global application. Then sets the extension managers extension_dirs dictionary to point to those directories.
+
+        OS Defaults:
+        
+          OSX:
+            user: $HOME/Library/Commotion/extension_data/
+            global: /Library/Application Support /Commotion/extension_data/
+        
+          Windows:
+            user: %APPDATA%\Local\Commotion\extension_data\.
+            global: %COMMON_APPDATA%\Local\Commotion\extension_data\.
+            The %APPDATA% path is usually C:\Documents and Settings\User Name\Application Data; the %COMMON_APPDATA% path is usually C:\Documents and Settings\All Users\Application Data.
+        
+          Linux:
+            user: $HOME/.Commotion/extension_data/
+            global: /usr/share/Commotion/extension_data/
+        
+        Raises:
+          IOError: If the application does not have permission to create ANY of the extension directories.
+     
+        """
+        self.log.debug(self.translate("logs", "Setting the default extension directory defaults.")) 
+        platform = sys.platform
+        #Default global and user extension directories per platform.
+        #win23, darwin, and linux supported.
+        platform_dirs = {
+            'darwin': {
+                'user' : os.path.join("Library", "Commotion", "extension_data"),
+                'user_root': QtCore.QDir.home(),
+                'global' : os.path.join("Library", "Application Support", "Commotion", "extension_data")
+                'global_root' : QtCore.QDir.root()},
+            'win32' : {
+                'user':os.path.join("Local", "Commotion", "extension_data"),
+                'user_root': QtCore.QDir(os.getenv('APPDATA')),
+                'global':os.path.join("Local", "Commotion", "extension_data"),
+                'global_root' : QtCore.QDir(os.getenv('COMMON_APPDATA'))},
+            'linux': {
+                'user':os.path.join(".Commotion", "extension_data"),
+                'user_root': QtCore.QDir.home(),
+                'global':os.path.join("usr", "share", "Commotion", "extension_data"),
+                'global_root' : QtCore.QDir.root()}}
+        
+        #User Path Settings
+        for path_type in ['user', 'global']:
+            ext_dir = platform_dirs[platform][path_type+'_root']
+            ext_path = platform_dirs[platform][path_type]
+            if not ext_dir.exists():
+                if ext_dir.mkpath(ext_path.absolutePath()):
+                    self.log.debug(self.translate("logs", "Created the {0} extension directory at {1}".format(path_type, str(ext_path.absolutePath()))))
+                    ext_dir.setPath(ext_path)
+                    self.extension_dirs[path_type] = ext_dir.absolutePath()
+                    self.log.debug(self.translate("logs", "Set the {0} extension directory to {1}".format(path_type, str(ext_path.absolutePath())))) 
+                else:
+                    raise IOError(self.translate("logs", "Could not create the user extension directory."))
+            else:
+                self.extension_dirs[path_type] = ext_dir.absolutePath()
+                self.log.debug(self.translate("logs", "Set the {0} extension directory to {1}".format(path_type, str(ext_path.absolutePath()))))
+    
     def check_installed(self, name=None):
         """Checks if and extension is installed.
             
@@ -61,13 +119,16 @@ class ExtensionManager(object):
         else:
             return False
 
-    def load_all(self):
-        """Loads all extensions in the user and global extension directories.
+    def load_core(self):
+        """Loads all core extensions.
         
-        This function bootstraps the Commotion client when the settings are not populated on first boot or due to error. It iterates through all extensions that should be loaded for a user and adds them to the settings. NOTE: Does not do any validation as it relies on save_settings to validate all fields.
+        This function bootstraps the Commotion client when the settings are not populated on first boot or due to error. It iterates through all extensions in the core client and loads them.
+
+        NOTE: Relies on save_settings to validate all fields.
 
         Returns:
           List of names (strings) of extensions loaded  on success. Returns False (bool) on failure.
+        
         """
         installed = self.get_installed()
         exist = config.get_config_paths("extension")
