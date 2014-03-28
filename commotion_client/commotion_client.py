@@ -69,9 +69,6 @@ def main():
     Function that handles command line arguments, translation, and creates the main application.
     """
     args = get_args()
-
-    #Enable Logging
-    log = logger.set_logging("commotion_client", args['logLevel'], args['logFile'])
     
     #Create Instance of Commotion Application
     app = CommotionClientApplication(args, sys.argv)
@@ -132,9 +129,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
     def __init__(self, args, argv):
         super().__init__(args['key'], argv)
         status = args['status']
-        self.loglevel = args['logLevel']
-        self.logfile = args['logFile']
-        self.log = self.init_logging()
+        self.init_logging(args['logLevel'], args['logFile'])
         #Set Application and Organization Information
         self.setOrganizationName("The Open Technology Institute")
         self.setOrganizationDomain("commotionwireless.net")
@@ -170,10 +165,11 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             self.log.exception(_excp)
             self.end(_catch_all)
 
-    def init_logging(self):
-        log = logger.set_logging("commotion_client", self.loglevel, self.logfile)
-        return log
-        
+    def init_logging(self, level, logfile):
+        args['logLevel'], args['logFile']
+        self.logger = logger.LogHandler("commotion_client", self.loglevel, self.logfile)
+        self.log = logger.get_logger()
+    
     def start_full(self):
         """
         Start or switch client over to full client.
@@ -508,8 +504,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             self.log.info(self.translate("logs", "Received a message to restart. Restarting Now."))
             self.restart_client(force_close=True) #TODO, might not want strict here post-development
         elif message == "debug":
-            self.loglevel = 5
-            self.log = self.init_logging()
+            self.logger.set_verbosity("DEBUG")
         else:
             self.log.info(self.translate("logs", "message \"{0}\" not a supported type.".format(message)))
 
