@@ -17,8 +17,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU Affero General Public License for more details.
 
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU Affero General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
@@ -97,6 +96,7 @@ class LogHandler(object):
                     self.logfile = log_dir.filePath("commotion.log")
                 else:
                     #If fail then just write logs in app path
+                    #TODO check if this is appropriate... its not.
                     self.logfile = QtCore.QDir.current().filePath("commotion.log")
             else:
                 self.logfile = log_dir.filePath("commotion.log")
