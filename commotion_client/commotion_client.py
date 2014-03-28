@@ -53,9 +53,7 @@ def get_args():
     parsed_args['message'] = args.message if args.message else False
     #TODO getConfig() #actually want to get this from commotion_config
     parsed_args['logLevel'] = args.verbose if args.verbose else 2
-    #TODO change the logfile to be the default logging place for the system
-    default_logfile = os.path.join(args.logfile QtCore.QDir.currentPath(), "logfile")
-    parsed_args['logFile'] = args.logfile if args.logfile else default_logfile
+    parsed_args['logFile'] = args.logfile if args.logfile else None
     parsed_args['key'] = ['key'] if args.key else "commotionRocks" #TODO the key is PRIME easter-egg fodder
     parsed_args['status'] = "daemon" if args.daemon else False
     return parsed_args
@@ -69,7 +67,6 @@ def main():
     Function that handles command line arguments, translation, and creates the main application.
     """
     args = get_args()
-    
     #Create Instance of Commotion Application
     app = CommotionClientApplication(args, sys.argv)
 
@@ -129,7 +126,9 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
     def __init__(self, args, argv):
         super().__init__(args['key'], argv)
         status = args['status']
-        self.init_logging(args['logLevel'], args['logFile'])
+        _logfile = args['logFile']
+        _loglevel = args['logLevel']
+        self.init_logging(_loglevel, _logfile)
         #Set Application and Organization Information
         self.setOrganizationName("The Open Technology Institute")
         self.setOrganizationDomain("commotionwireless.net")
@@ -165,10 +164,9 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
             self.log.exception(_excp)
             self.end(_catch_all)
 
-    def init_logging(self, level, logfile):
-        args['logLevel'], args['logFile']
-        self.logger = logger.LogHandler("commotion_client", self.loglevel, self.logfile)
-        self.log = logger.get_logger()
+    def init_logging(self, level=None, logfile=None):
+        self.logger = logger.LogHandler("commotion_client", level, logfile)
+        self.log = self.logger.get_logger()
     
     def start_full(self):
         """
