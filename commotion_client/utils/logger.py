@@ -24,7 +24,9 @@ You should have received a copy of the GNU Affero General Public License along w
 #TODO create seperate levels for the stream, the file, and the full logger
 from PyQt4 import QtCore
 import logging
+from logging import handlers
 import os
+import sys
 
 class LogHandler(object):
     """
@@ -38,17 +40,19 @@ class LogHandler(object):
         log = logger.getLogger("commotion_client"+__name__)
     
     """
-
-
+    
     def __init__(self, name, verbosity=None, logfile=None):
-        self.logger = logger.getLogger(str(name))
+        #set core logger
+        self.logger = logging.getLogger(str(name))
+        #set defaults
+        self.levels = {"CRITICAL":logging.CRITICAL, "ERROR":logging.ERROR, "WARN":logging.WARN, "INFO":logging.INFO, "DEBUG":logging.DEBUG}
+        self.formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(lineno)d : %(message)s')
         self.stream = None
         self.file_handler = None
         self.logfile = None
-        self.formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(lineno)d : %(message)s')
+        #setup logger
         self.set_logfile(logfile)
         self.set_verbosity(verbosity)
-        self.levels = {"CRITICAL":logging.CRITICAL, "ERROR":logging.ERROR, "WARN":logging.WARN, "INFO":logging.INFO, "DEBUG":logging.DEBUG}
 
     def set_logfile(self, logfile=None):
         """Set the file to log to.
@@ -151,7 +155,7 @@ class LogHandler(object):
         if set_logfile == True:
             self.logger.removeHandler(self.file_handler)
             self.file_handler = None
-            self.file_handler = logging.RotatingFileHandler(self.logfile,
+            self.file_handler = handlers.RotatingFileHandler(self.logfile,
                                                             maxBytes=5000000,
                                                             backupCount=5)
             self.file_handler.setFormatter(self.formatter)
