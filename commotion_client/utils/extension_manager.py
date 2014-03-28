@@ -17,6 +17,7 @@ import importlib
 import shutil
 import os
 import re
+import sys
 
 #PyQt imports
 from PyQt4 import QtCore
@@ -31,6 +32,7 @@ class ExtensionManager(object):
     def __init__(self):
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
+        self.extension_dirs = {}
         self.set_extension_dir_defaults()
         self.config_values = ["name",
                               "main",
@@ -42,7 +44,7 @@ class ExtensionManager(object):
         self.extensions = self.check_installed()
 
     def set_extension_dir_defaults(self):
-        """Sets self.extension_dirs dictionary for user and global extension directories to system defaults.
+        r"""Sets self.extension_dirs dictionary for user and global extension directories to system defaults.
         
         Creates an extension folder, if it does not exit, in the operating systems default application data directories for the current user and for the global application. Then sets the extension managers extension_dirs dictionary to point to those directories.
 
@@ -73,7 +75,7 @@ class ExtensionManager(object):
             'darwin': {
                 'user' : os.path.join("Library", "Commotion", "extension_data"),
                 'user_root': QtCore.QDir.home(),
-                'global' : os.path.join("Library", "Application Support", "Commotion", "extension_data")
+                'global' : os.path.join("Library", "Application Support", "Commotion", "extension_data"),
                 'global_root' : QtCore.QDir.root()},
             'win32' : {
                 'user':os.path.join("Local", "Commotion", "extension_data"),
@@ -92,15 +94,15 @@ class ExtensionManager(object):
             ext_path = platform_dirs[platform][path_type]
             if not ext_dir.exists():
                 if ext_dir.mkpath(ext_path.absolutePath()):
-                    self.log.debug(self.translate("logs", "Created the {0} extension directory at {1}".format(path_type, str(ext_path.absolutePath()))))
                     ext_dir.setPath(ext_path)
+                    self.log.debug(self.translate("logs", "Created the {0} extension directory at {1}".format(path_type, str(ext_dir.absolutePath()))))
                     self.extension_dirs[path_type] = ext_dir.absolutePath()
-                    self.log.debug(self.translate("logs", "Set the {0} extension directory to {1}".format(path_type, str(ext_path.absolutePath())))) 
+                    self.log.debug(self.translate("logs", "Set the {0} extension directory to {1}".format(path_type, str(ext_dir.absolutePath()))))
                 else:
                     raise IOError(self.translate("logs", "Could not create the user extension directory."))
             else:
                 self.extension_dirs[path_type] = ext_dir.absolutePath()
-                self.log.debug(self.translate("logs", "Set the {0} extension directory to {1}".format(path_type, str(ext_path.absolutePath()))))
+                self.log.debug(self.translate("logs", "Set the {0} extension directory to {1}".format(path_type, str(ext_dir.absolutePath()))))
     
     def check_installed(self, name=None):
         """Checks if and extension is installed.
@@ -130,6 +132,15 @@ class ExtensionManager(object):
           List of names (strings) of extensions loaded  on success. Returns False (bool) on failure.
         
         """
+        package = extensions
+        prefix = package.__name__ + "."
+        for importer, modname, ispkg in pkgutil.iter_modules(package.__path__, prefix):
+            self.log.debug("logs", "Core package {0} found in extensions.")
+            module = __import__(modname, fromlist="dummy")
+            self.log.debug("logs", "Core package {0} imported.")
+        CONTINUE_THIS_HERE()    
+        #---------TODO START HERE --------------------
+            
         installed = self.get_installed()
         exist = config.get_config_paths("extension")
         if not exist:
