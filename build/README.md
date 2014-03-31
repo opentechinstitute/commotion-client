@@ -41,3 +41,11 @@ Extensions are built-in to the Commotion client by adding them to the extension 
 core_extensions = ["config_editor", "main_window", "your_extension_name"]
 ```
 
+### Creating an executable
+
+Linux:
+  * go to the root directory of the project.
+  * type ```make linux```
+  * The executables folder will be created in the build directory.
+  * run the ```Commotion``` executable in the executables folder.
+  
