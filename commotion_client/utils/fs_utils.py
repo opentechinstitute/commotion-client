@@ -16,21 +16,25 @@ import logging
 import uuid
 
 def is_file(unknown):
+    """Determines if a file is accessable. It does NOT check to see if the file contains any data.
+    
+    Args:
+      unknown (string): The path to check for a accessable file.
+    
+    Returns:
+      bool True if a file is accessable and readable, False if a file is unreadable, or unaccessable.
+    
     """
-    Determines if a file is accessable. It does NOT check to see if the file contains any data.
-    """
+    translate = QtCore.QCoreApplication.translate
     log = logging.getLogger("commotion_client."+__name__)
-    try:
-        assert os.lstat(unknown).st_size > 0, "not a file: %s" % unknown
-    except (AssertionError, TypeError, IOError, OSError) as err:
-#end stolen <3
-        log.debug("is_file():"+err.strerror)
+    this_file = QtCore.QFile(str(unknown))
+    if not this_file.exists():
+        log.warn(translate("logs","The file {0} does not exist.".format(str(unknown))))
         return False
-    if os.access(unknown, os.R_OK):
-        return True
-    else:
-        log.warn("is_file():You do not have permission to access that file")
+    if not os.access(unknown, os.R_OK):
+        log.warn(translate("logs","You do not have permission to access the file {0}".format(str(unknown))))
         return False
+    return True
 
 def walklevel(some_dir, level=1):
     some_dir = some_dir.rstrip(os.path.sep)
@@ -98,3 +102,40 @@ def copy_contents(start, end):
             log.error(_error)
             raise IOError(_error)
     return True
+
+def json_load(path):
+    """This function loads a JSON file and returns a formatted dictionary.
+    
+    Args:
+    path (string): The path to a json formatted file.
+    
+    Returns:
+      The JSON data from the file formatted as a dictionary.
+    
+    Raises:
+      TypeError: The file could not be opened due to an unknown error.
+      ValueError: The file was of an invalid type (eg. not in utf-8 format, etc.)
+    
+    """
+    translate = QtCore.QCoreApplication.translate
+    log = logging.getLogger("commotion_client."+__name__)
+    
+    #Open the file
+    try:
+        f = open(string, mode='r', encoding="utf-8", errors="strict")
+    except ValueError:
+        log.warn(translate("logs", "Config files must be in utf-8 format to avoid data loss. The config file {0} is improperly formatted ".format(path)))
+        raise
+    except TypeError:
+        log.warn(translate("logs", "An unknown error has occured in opening config file {0}. Please check that this file is the correct type.".format(path)))
+        raise
+    else:
+       tmpMsg = f.read()
+       #Parse the JSON
+    try:
+        data = json.loads(tmpMsg)
+        log.info(translate("logs", "Successfully loaded {0}".format(path)))
+        return data
+    except ValueError:
+        log.warn(translate("logs", "Failed to load {0} due to a non-json or otherwise invalid file type".format(path)))
+        raise

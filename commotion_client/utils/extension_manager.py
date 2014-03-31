@@ -18,12 +18,13 @@ import shutil
 import os
 import re
 import sys
+import pkgutil
+import json
 
 #PyQt imports
 from PyQt4 import QtCore
 
 #Commotion Client Imports
-from commotion_client.utils import config
 from commotion_client.utils import fs_utils
 from commotion_client.utils import validate
 from commotion_client import extensions
@@ -42,9 +43,11 @@ class ExtensionManager(object):
                               "settings",
                               "toolbar"]
         self.extensions = self.check_installed()
+        _core = os.path.join(QtCore.QDir.currentPath(), "core_extensions")
+        self.core = ConfigManager(_core)
 
     def set_extension_dir_defaults(self):
-        r"""Sets self.extension_dirs dictionary for user and global extension directories to system defaults.
+        """Sets self.extension_dirs dictionary for user and global extension directories to system defaults.
         
         Creates an extension folder, if it does not exit, in the operating systems default application data directories for the current user and for the global application. Then sets the extension managers extension_dirs dictionary to point to those directories.
 
@@ -55,9 +58,9 @@ class ExtensionManager(object):
             global: /Library/Application Support /Commotion/extension_data/
         
           Windows:
-            user: %APPDATA%\Local\Commotion\extension_data\.
-            global: %COMMON_APPDATA%\Local\Commotion\extension_data\.
-            The %APPDATA% path is usually C:\Documents and Settings\User Name\Application Data; the %COMMON_APPDATA% path is usually C:\Documents and Settings\All Users\Application Data.
+            user: %APPDATA%\\Local\\Commotion\\extension_data\\.
+            global: %COMMON_APPDATA%\\Local\\Commotion\extension_data\\.
+            The %APPDATA% path is usually C:\\Documents and Settings\\User Name\\Application Data; the %COMMON_APPDATA% path is usually C:\\Documents and Settings\\All Users\\Application Data.
         
           Linux:
             user: $HOME/.Commotion/extension_data/
@@ -65,8 +68,8 @@ class ExtensionManager(object):
         
         Raises:
           IOError: If the application does not have permission to create ANY of the extension directories.
-     
         """
+        
         self.log.debug(self.translate("logs", "Setting the default extension directory defaults.")) 
         platform = sys.platform
         #Default global and user extension directories per platform.
@@ -132,22 +135,13 @@ class ExtensionManager(object):
           List of names (strings) of extensions loaded  on success. Returns False (bool) on failure.
         
         """
-        package = extensions
-        prefix = package.__name__ + "."
-        for importer, modname, ispkg in pkgutil.iter_modules(package.__path__, prefix):
-            self.log.debug("logs", "Core package {0} found in extensions.")
-            module = __import__(modname, fromlist="dummy")
-            self.log.debug("logs", "Core package {0} imported.")
-        CONTINUE_THIS_HERE()    
-        #---------TODO START HERE --------------------
-            
         installed = self.get_installed()
-        exist = config.get_config_paths("extension")
+        exist = self.core.configs
         if not exist:
             self.log.info(self.translate("logs", "No extensions found."))
             return False
         for config_path in exist:
-            _config = config.load_config(config_path)
+            _config = self.config.load_config(config_path)
             if _config['name'] in installed.keys():
                 _type = installed[_config['name']]
                 if _type == "global":
@@ -185,7 +179,7 @@ class ExtensionManager(object):
            'contribExtension':"global", 'anotherContrib':"global"}
 
         """
-        WRITE_TESTS_FOR_ME()
+#        WRITE_TESTS_FOR_ME()
         installed_extensions = {}
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
@@ -211,8 +205,8 @@ class ExtensionManager(object):
         Raises:
           KeyError: If the value requested is non-standard.
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         matching_extensions = []
         if value not in self.config_values:
             _error = self.translate("logs", "That is not a valid extension config value.")
@@ -254,8 +248,8 @@ class ExtensionManager(object):
         Raises:
           KeyError: If the value requested is non-standard.
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         if value not in self.config_values:
             _error = self.translate("logs", "That is not a valid extension config value.")
             raise KeyError(_error)
@@ -283,8 +277,8 @@ class ExtensionManager(object):
         Raises:
           KeyError: If an extension does not exist.
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
         core_ext = _settings.value("core/"+str(name))
@@ -303,8 +297,8 @@ class ExtensionManager(object):
         @param extension_name string The extension to load
         @subsection string Name of a objects sub-section. (settings, main, or toolbar)
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         user_interface_types = {'main': "ViewPort", "setttings":"SettingsMenu", "toolbar":"ToolBar"}
         settings = self.load_settings(extension_name)
         if subsection:
@@ -321,8 +315,8 @@ class ExtensionManager(object):
         @param extension_name string The extension to load
         @param subsection string The module to load from an extension
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         if subsection:
             extension = importlib.import_module("."+subsection, "extensions."+extension_name)
         else:
@@ -334,8 +328,8 @@ class ExtensionManager(object):
 
         @return dict A dictionary containing an extensions properties.
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         extension_config = {"name":extension_name}
         extension_type = self.extensions[extension_name]
         
@@ -346,7 +340,7 @@ class ExtensionManager(object):
         #get extension dir
         main_ext_dir = os.path.join(QtCore.QDir.currentPath(), "extensions")
         main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
-        extension_dir = QtCore.QDir.mkpath(os.path.join(main_ext_type_dir, config['name']))
+        extension_dir = QtCore.QDir.mkpath(os.path.join(main_ext_type_dir, extension_config['name']))
         extension_files = extension_dir.entryList()
         if not extension_config['main']:
             if "main.py" in extension_files:
@@ -372,8 +366,8 @@ class ExtensionManager(object):
 
         @param name str the name of an extension to remove from the extension settings.
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         if len(str(name)) > 0:
             _settings = QtCore.QSettings()
             _settings.beginGroup("extensions")
@@ -513,8 +507,8 @@ class ExtensionManager(object):
         Raises:
         exception: Description.
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         #There can be only two... and I don't trust you.
         if extension_type != "contrib":
             extension_type = "core"
@@ -545,8 +539,8 @@ class ExtensionManager(object):
                 if re.match("^.*\.conf$", file_):
                     config_name = file_
                     config_path = os.path.join(unpacked.absolutePath(), file_)
-            _config = config.load_config(config_path)
-            existing_extensions = config.find_configs("extension")
+            _config = self.config.load_config(config_path)
+            existing_extensions = self.config.find_configs("extension")
             try:
                 assert _config['name'] not in existing_extensions
             except AssertionError:
@@ -621,8 +615,8 @@ class ExtensionManager(object):
         Raises:
           IOError: If a config file of the same name already exists or the extension can not be saved.
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         data_dir = os.path.join(QtCore.QDir.currentPath(), "data")
         config_dir = os.path.join(data_dir, "extensions")
         #If the data/extensions folder does not exist, make it.
@@ -649,8 +643,8 @@ class ExtensionManager(object):
         Raises:
           IOError: If a config file does not exist in the extension data folder.
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         data_dir = os.path.join(QtCore.QDir.currentPath(), "data")
         config_dir = os.path.join(data_dir, "extensions")
         config = os.path.join(config_dir, name)
@@ -669,8 +663,8 @@ class ExtensionManager(object):
         @param compressed_extension string Path to the compressed_extension
         @return A string object containing the absolute path to the temporary directory
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         temp_dir = fs_utils.make_temp_dir(new=True)
         temp_abs_path = temp_dir.absolutePath()
         try:
@@ -697,8 +691,8 @@ class ExtensionManager(object):
         Raises:
           ValueError: If an extension with that name already exists. 
         """
-        WRITE_TESTS_FOR_ME()
-        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+#        WRITE_TESTS_FOR_ME()
+#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         extension_path = "extensions/"+extension_type+"/"+extension_name
         full_path = os.path.join(QtCore.QDir.currentPath(), extension_path)
         if not fs_utils.is_file(full_path):
@@ -724,3 +718,118 @@ class InvalidSignature(Exception):
     This exception should only be handled by halting the current task.
     """
     pass
+
+
+class ConfigManager(object):
+
+    def __init__(self, path=None):
+        #set function logger
+        self.log = logging.getLogger("commotion_client."+__name__)
+        self.translate = QtCore.QCoreApplication.translate
+        if path:
+            self.paths = self.get_paths(path)
+            self.configs = []
+            self.configs = self.get()
+            
+    def find(self, name=None):
+        """
+        Function used to obtain a config file from the ConfigManager.
+
+        @param name optional The name of the configuration file if known
+        @param path string The absolute path to the folder to check for extension configs.
+
+        @return list of tuples containing a config name and its config.
+        """
+        if not self.configs:
+            self.log.warn(self.translate("logs", "No configs have been loaded. Please load configs first.".format(name)))
+            return False
+        if not name:
+            return self.configs
+        elif name != None:
+            for conf in self.configs:
+                if conf["name"] and conf["name"] == name:
+                    return conf
+            self.log.error(self.translate("logs", "No config of the chosed type named {0} found".format(name)))
+            return False
+
+    def get_paths(self, directory):
+        """Returns the paths to all config files within a directory.
+        
+        Args:
+          directory (string): The path to the folder that extension's are within. Extensions can be up to one level below the directory given.
+        
+        Returns:
+          config_files (array): An array of paths to all config files found in the directory given.
+        
+        Raises:
+          TypeError: If no extensions exist within the directory requested.
+          AssertionError: If the directory path does not exist.
+        
+        """
+        #Check the directory and 
+        dir_obj = QtCore.QDir(str(directory))
+        if not dir_obj.exists(dir_obj.path()):
+            self.log.warn(self.translate("logs", "Folder at path {0} does not exist. No Config files loaded.".format(str(directory))))
+            return False
+        else:
+            path = dir_obj.absolutePath()
+
+        config_files = []
+        try:
+            for root, dirs, files in fs_utils.walklevel(path):
+                for file_name in files:
+                    if file_name.endswith(".conf"):
+                        config_files.append(os.path.join(root, file_name))
+        except AssertionError:
+            self.log.warn(self.translate("logs", "Config file folder at path {0} does not exist. No Config files loaded.".format(path)))
+            raise
+        except TypeError:
+            self.log.warn(self.translate("logs", "No config files found at path {0}. No Config files loaded.".format(path)))
+            raise
+        if config_files:
+            return config_files
+        else:
+            raise TypeError(self.translate("logs", "No config files found at path {0}. No Config files loaded.".format(path)))
+
+    def get(self, paths):
+        """
+        Generator to retreive config files for the paths passed to it
+
+        @param a list of paths of the configuration file to retreive
+        @return config file as a dictionary
+        """
+        #load config file
+        if not paths:
+            paths = self.paths
+        for path in paths:
+            if fs_utils.is_file(path):
+                config = self.load(path)
+                if config:
+                    yield config
+            else:
+                self.log.warn(self.translate("logs", "Config file {0} does not exist and therefore cannot be loaded.".format(path)))
+
+    def load(self, path):
+        """This function loads the formatted config file and returns it.
+        
+        long description
+        
+        Args:
+        path (string): The path to a config file
+        
+        Returns:
+          (dictionary) On success returns a dictionary containing the config file values.
+          (bool): On failure returns False
+        
+        """
+        myfile = QtCore.QFile(str(path))
+        if not myfile.exists(myfile.absolutePath()):
+            return False
+        try:
+            config = fs_utils.json_load(path)
+        except ValueError, TypeError as _excpt:
+            self.log.warn(self.translate("logs", "Could not load the config file {0}".format(str(path))))
+            self.log.debug(_excpt)
+            return False
+        else:
+            return config
