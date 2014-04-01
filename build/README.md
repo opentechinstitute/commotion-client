@@ -1,6 +1,42 @@
 
 # Build Documentation
 
+## Build Folder Structure
+
+build/
+  ├── exe.<platform>-<python version>/
+  ├── README.md <- The file you are reading.
+  ├── resources/
+  └── scripts/
+         └──compile_ui.py
+
+
+
+### exe.<platform>-<python version>/
+
+A set of folders containing all final bundled executables created by cx_freeze in the build process.
+
+Built for a  64 bit linux machine with python3.3 this will look like:
+
+```exe.linux-x86_64-3.3```
+
+These folders are not tracked by version control
+
+### scripts/
+
+All scripts used by the build process
+
+### resources/
+
+All resources created during the build process.
+
+This includes:
+  * All bundled extensions
+  * Compiled assets file ( commotion_assets_rc.py )
+
+This folder is not tracked by version control
+
+	 
 ## cx_freeze instructions
 
 ### Get cx_freeze

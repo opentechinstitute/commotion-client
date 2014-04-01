@@ -47,22 +47,27 @@ icon = "commotion_client/assets/images/logo32.png"
     
 # Define core packages.
 core_pkgs = ["commotion_client", "utils", "GUI", "assets"]
-# Define bundled "core" extensions here.
-core_extensions = ["config_editor"]
-# Add core_extensions to core packages.
-for ext in core_extensions:
-    core_pkgs.append("extensions."+ext)
-
 
 # Include compiled assets file.
 assets_file = os.path.join("commotion_client", "assets", "commotion_assets_rc.py")
 # Place compiled assets file into the root directory.
 include_assets = (assets_file, "commotion_assets_rc.py")
+all_assets = [include_assets]
+
+# Define bundled "core" extensions here.
+core_extensions = ["config_editor"]
+# Add core_extensions to core packages.
+for ext in core_extensions:
+    ext_loc = os.path.join("build", "resources", ext)
+    asset_loc = os.path.join("extensions", ext)
+    all_assets.append((ext_loc, asset_loc))
+
 
 #---------- Executable Setup -----------#
 
 exe = Executable(
     targetName="Commotion",
+    targetDir="build/exe",
     script="commotion_client/commotion_client.py",
     packages=core_pkgs,
     )
@@ -74,5 +79,5 @@ setup(name="Commotion Client",
       url="commotionwireless.net",
       license="Affero General Public License V3 (AGPLv3)",
       executables = [exe],
-      options = {"build_exe":{"include_files": [include_assets]}}
+      options = {"build_exe":{"include_files": all_assets}}
   )
