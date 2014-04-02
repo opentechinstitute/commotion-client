@@ -28,10 +28,8 @@ debian:
 
 build_tree:
 	mkdir build/resources || true
-	mkdir build/exe || true
 
 clean: 
 	python3.3 build/scripts/build.py clean
 	rm -fr build/resources/*
 	rm -fr build/exe.* || true
-

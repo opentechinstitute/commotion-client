@@ -54,8 +54,14 @@ assets_file = os.path.join("commotion_client", "assets", "commotion_assets_rc.py
 include_assets = (assets_file, "commotion_assets_rc.py")
 all_assets = [include_assets]
 
+
+#======== ADD EXTENSIONS HERE ==============#
+
 # Define bundled "core" extensions here.
 core_extensions = ["config_editor"]
+
+#===========================================#
+
 # Add core_extensions to core packages.
 for ext in core_extensions:
     ext_loc = os.path.join("build", "resources", ext)
@@ -67,7 +73,6 @@ for ext in core_extensions:
 
 exe = Executable(
     targetName="Commotion",
-    targetDir="build/exe",
     script="commotion_client/commotion_client.py",
     packages=core_pkgs,
     )
