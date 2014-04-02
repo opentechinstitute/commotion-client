@@ -44,6 +44,7 @@ class LogHandler(object):
     def __init__(self, name, verbosity=None, logfile=None):
         #set core logger
         self.logger = logging.getLogger(str(name))
+        self.logger.setLevel('DEBUG')
         #set defaults
         self.levels = {"CRITICAL":logging.CRITICAL, "ERROR":logging.ERROR, "WARN":logging.WARN, "INFO":logging.INFO, "DEBUG":logging.DEBUG}
         self.formatter = logging.Formatter('%(name)s %(asctime)s %(levelname)s %(lineno)d : %(message)s')
@@ -72,26 +73,17 @@ class LogHandler(object):
             log_dir = QtCore.QDir(os.path.join(QtCore.QDir.homePath(), "Library", "Logs"))
             #if it does not exist try and create it
             if not log_dir.exists():
-                if log_dir.mkpath(log_dir.absolutePath()):
-                    self.logfile = log_dir.filePath("commotion.log")
-                else:
-                    #If fail then just write logs in app path
-                    self.logfile = QtCore.QDir.current().filePath("commotion.log")
-            else:
-                
-                self.logfile = log_dir.filePath("commotion.log")
+                if not log_dir.mkpath(log_dir.absolutePath()):
+                    raise NotADirectoryError(self.translate("logs", "Attempted to set logging to the user's Commotion directory. The directory '<home>/.Commotion' does not exist and could not be created."))
+            self.logfile = log_dir.filePath("commotion.log")
         elif platform in ['win32', 'cygwin']:
             #Try ../AppData/Local/Commotion first
             log_dir = QtCore.QDir(os.path.join(os.getenv('APPDATA'), "Local", "Commotion"))
             #if it does not exist try and create it
             if not log_dir.exists():
-                if log_dir.mkpath(log_dir.absolutePath()):
-                    self.logfile = log_dir.filePath("commotion.log")
-                else:
-                    #If fail then just write logs in app path
-                    self.logfile = QtCore.QDir.current().filePath("commotion.log")
-            else:
-                self.logfile = log_dir.filePath("commotion.log")
+                if not log_dir.mkpath(log_dir.absolutePath()):
+                    raise NotADirectoryError(self.translate("logs", "Attempted to set logging to the user's Commotion directory. The directory '<home>/.Commotion' does not exist and could not be created."))
+            self.logfile = log_dir.filePath("commotion.log")
         elif platform == 'linux':
             #Try /var/logs/
             log_dir = QtCore.QDir("/var/logs/")
@@ -99,14 +91,19 @@ class LogHandler(object):
                 if log_dir.mkpath(log_dir.absolutePath()):
                     self.logfile = log_dir.filePath("commotion.log")
                 else:
-                    #If fail then just write logs in app path
+                    #If fail then just write logs in home directory
                     #TODO check if this is appropriate... its not.
-                    self.logfile = QtCore.QDir.current().filePath("commotion.log")
+                    home = QtCore.QDir.home()
+                    if not home.mkdir(".Commotion"):
+                        raise NotADirectoryError(self.translate("logs", "Attempted to set logging to the user's Commotion directory. The directory '<home>/.Commotion' does not exist and could not be created."))
+                    else:
+                        home.cd(".Commotion")
+                        self.logfile = home.filePath("commotion.log")
             else:
                 self.logfile = log_dir.filePath("commotion.log")
         else:
-            #Fallback is in the core app directory.
-            self.logfile = QtCore.QDir.current().filePath("commotion.log")
+            #I'm out!
+            raise OSError(self.translate("logs", "Could not create a logfile."))
 
     def set_verbosity(self, verbosity=None, log_type=None):
         """Set's the verbosity of the logging for the application.
@@ -133,7 +130,8 @@ class LogHandler(object):
                 return False
         else:
             if 1 <= int_level <= 5:
-                level = list(self.levels.keys())[int_level-1]
+                _levels = [ 'CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
+                level = self.levels[_levels[int_level-1]]
             else:
                 return False
                 
@@ -144,7 +142,7 @@ class LogHandler(object):
         else:
             set_logfile = True
             set_stream = True
-            
+
         if set_stream == True:
             self.logger.removeHandler(self.stream)
             self.stream = None
