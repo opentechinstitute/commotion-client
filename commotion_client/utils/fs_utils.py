@@ -14,6 +14,11 @@ from PyQt4 import QtCore
 import os
 import logging
 import uuid
+import json
+
+translate = QtCore.QCoreApplication.translate
+log = logging.getLogger("commotion_client."+__name__)
+
 
 def is_file(unknown):
     """Determines if a file is accessable. It does NOT check to see if the file contains any data.
@@ -26,7 +31,6 @@ def is_file(unknown):
     
     """
     translate = QtCore.QCoreApplication.translate
-    log = logging.getLogger("commotion_client."+__name__)
     this_file = QtCore.QFile(str(unknown))
     if not this_file.exists():
         log.warn(translate("logs","The file {0} does not exist.".format(str(unknown))))
@@ -38,7 +42,9 @@ def is_file(unknown):
 
 def walklevel(some_dir, level=1):
     some_dir = some_dir.rstrip(os.path.sep)
-    assert os.path.isdir(some_dir)
+    log.debug(translate("logs", "attempting to walk directory {0}".format(some_dir)))
+    if not os.path.isdir(some_dir):
+        raise NotADirectoryError(translate("logs", "{0} is not a directory. Can only 'walk' down through directories.".format(some_dir)))
     num_sep = some_dir.count(os.path.sep)
     for root, dirs, files in os.walk(some_dir):
         yield root, dirs, files
@@ -73,11 +79,11 @@ def clean_dir(path=None):
     if not path:
         path = QtCore.QDir(os.path.join(QtCore.QDir.tempPath(), "Commotion"))
     path.setFilter(QtCore.QDir.NoSymLinks | QtCore.QDir.Files)
-    list_of_files = path.entryList()
+    list_of_files = path.entryInfoList()
 
-    for file_ in list_of_files:
-        file_ = os.path.join(path.path(), file_)
-        if not QtCore.QFile(file_).remove():
+    for file_info in list_of_files:
+        file_path = file_info.absoluteFilePath()
+        if not QtCore.QFile(file_path).remove():
             _error = QtCore.QCoreApplication.translate("logs", "Error saving extension to extensions directory.")
             log.error(_error)
             raise IOError(_error)
@@ -92,11 +98,11 @@ def copy_contents(start, end):
     """
     log = logging.getLogger("commotion_client."+__name__)
     start.setFilter(QtCore.QDir.NoSymLinks | QtCore.QDir.Files)
-    list_of_files = start.entryList()
+    list_of_files = start.entryInfoList()
 
-    for file_ in list_of_files:
-        source = os.path.join(start.path(), file_)
-        dest = os.path.join(end.path(), file_)
+    for file_info in list_of_files:
+        source = file_info.absoluteFilePath()
+        dest = os.path.join(end.path(), file_info.fileName())
         if not QtCore.QFile(source).copy(dest):
             _error = QtCore.QCoreApplication.translate("logs", "Error copying file into extensions directory. File already exists.")
             log.error(_error)

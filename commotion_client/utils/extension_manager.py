@@ -18,7 +18,7 @@ import shutil
 import os
 import re
 import sys
-import pkgutil
+import zipfile
 import json
 
 #PyQt imports
@@ -30,27 +30,31 @@ from commotion_client.utils import validate
 from commotion_client import extensions
 
 class ExtensionManager(object):
+    
     def __init__(self):
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
+        self.extensions = {}
         self.extension_dirs = {}
-        self.set_extension_dir_defaults()
         self.config_values = ["name",
                               "main",
                               "menu_item",
                               "menu_level",
                               "parent",
                               "settings",
-                              "toolbar"]
-        self.extensions = self.check_installed()
-        _core = os.path.join(QtCore.QDir.currentPath(), "core_extensions")
-        self.core = ConfigManager(_core)
+                              "toolbar",
+                              "tests"]
 
-    def set_extension_dir_defaults(self):
-        """Sets self.extension_dirs dictionary for user and global extension directories to system defaults.
+    def init_extension_libraries(self):
+        self.set_library_defaults()
+        self.init_libraries()
+        self.load_core()
+        self.init_extension_config()
+        self.load_libraries()
+
+    def set_library_defaults(self):
+        """Sets the default directories for core, user, and global extensions.
         
-        Creates an extension folder, if it does not exit, in the operating systems default application data directories for the current user and for the global application. Then sets the extension managers extension_dirs dictionary to point to those directories.
-
         OS Defaults:
         
           OSX:
@@ -69,8 +73,15 @@ class ExtensionManager(object):
         Raises:
           IOError: If the application does not have permission to create ANY of the extension directories.
         """
-        
-        self.log.debug(self.translate("logs", "Setting the default extension directory defaults.")) 
+        #==== Core ====#
+        _app_path = QtCore.QDir(QtCore.QCoreApplication.applicationDirPath())
+        _app_path.setPath("extensions")
+        #set the core extension directory
+        self.extension_dirs['core'] = _app_path.absolutePath()
+        self.log.debug(self.translate("logs", "Core extension directory succesfully set."))
+
+        #==== SYSTEM DEFAULTS =====#
+        self.log.debug(self.translate("logs", "Setting the default extension directory defaults."))
         platform = sys.platform
         #Default global and user extension directories per platform.
         #win23, darwin, and linux supported.
@@ -90,23 +101,52 @@ class ExtensionManager(object):
                 'user_root': QtCore.QDir.home(),
                 'global':os.path.join("usr", "share", "Commotion", "extension_data"),
                 'global_root' : QtCore.QDir.root()}}
-        
-        #User Path Settings
         for path_type in ['user', 'global']:
             ext_dir = platform_dirs[platform][path_type+'_root']
             ext_path = platform_dirs[platform][path_type]
+            #move the root directory to the correct sub-path.
+            ext_dir.setPath(ext_path)
+            #Set the extension directory.
+            self.extension_dirs[path_type] = ext_dir.absolutePath()
+
+    def init_libraries(self):
+        """Creates an extension folder, if it does not exit, in the operating systems default application data directories for the current user and for the global application. """
+        #==== USER & GLOBAL =====#
+        for path_type in ['user', 'global']:
+            try:
+                ext_dir = QtCore.QDir(self.extension_dirs[path_type])
+            except KeyError:
+                self.log.warn(self.translate("logs", "No directory is specified for the {0} library. Try running set_library_defaults to initalize the default libraries.".format(path_type)))
+                #If the directories are not yet created. We are not going to have this fail.
+                continue
             if not ext_dir.exists():
-                if ext_dir.mkpath(ext_path.absolutePath()):
-                    ext_dir.setPath(ext_path)
-                    self.log.debug(self.translate("logs", "Created the {0} extension directory at {1}".format(path_type, str(ext_dir.absolutePath()))))
-                    self.extension_dirs[path_type] = ext_dir.absolutePath()
-                    self.log.debug(self.translate("logs", "Set the {0} extension directory to {1}".format(path_type, str(ext_dir.absolutePath()))))
+                if ext_dir.mkpath(ext_dir.absolutePath()):
+                    self.log.debug(self.translate("logs", "Created the {0} extension library at {1}".format(path_type, str(ext_dir.absolutePath()))))
                 else:
-                    raise IOError(self.translate("logs", "Could not create the user extension directory."))
+                    raise IOError(self.translate("logs", "Could not create the user extension library for {0}.".format(path_type)))
             else:
-                self.extension_dirs[path_type] = ext_dir.absolutePath()
-                self.log.debug(self.translate("logs", "Set the {0} extension directory to {1}".format(path_type, str(ext_dir.absolutePath()))))
-    
+                self.log.debug(self.translate("logs", "The extension library at {0} already existed for {1}".format(str(ext_dir.absolutePath()), path_type)))
+
+    def init_extension_config(self, ext_type=None):
+        """ Initializes config objects for the path of extensions.
+
+        Args:
+          ext_type (string): A specific extension type to load/reload a config object from. [global, user, or core]. If not provided, defaults to all.
+
+        Raises:
+          ValueError: If the extension type passed is not either [core, global, or user]
+        """
+        self.log.debug(self.translate("logs", "Initializing {0} extension configs..".format(ext_type)))
+        extension_types = ['user', 'global', 'core']
+        if ext_type:
+            if str(ext_type) in extension_types:
+                extension_types = [ext_type]
+            else:
+                raise ValueError(self.translate("logs", "{0} is not an acceptable extension type.".format(ext_type)))
+        for type_ in extension_types:
+            self.extensions[type_] = ConfigManager(self.extension_dirs[type_])
+            self.log.debug(self.translate("logs", "Configs for {0} extension library loaded..".format(type_)))
+
     def check_installed(self, name=None):
         """Checks if and extension is installed.
             
@@ -116,58 +156,82 @@ class ExtensionManager(object):
         Returns:
           bool: True if named extension is installed, false, if not.
         """
-        installed_extensions = self.get_installed().keys()
+        installed_extensions = list(self.get_installed().keys())
         if name and name in installed_extensions:
+            self.log.debug(self.translate("logs", "Extension {0} found in installed extensions.".format(name)))
             return True
         elif not name and installed_extensions:
+            self.log.debug(self.translate("logs", "Installed extensions found."))
             return True
         else:
+            self.log.debug(self.translate("logs", "Extension/s NOT found."))
             return False
 
     def load_core(self):
-        """Loads all core extensions.
+        """Loads all core extensions into the globals library and global settings.
         
         This function bootstraps the Commotion client when the settings are not populated on first boot or due to error. It iterates through all extensions in the core client and loads them.
 
+        """
+        #Core extensions are loaded from the global directory.
+        #If a core extension has been deleted from the global directory it will be replaced from the core directory.
+        self.init_extension_config('core')
+        _core_dir = QtCore.QDir(self.extension_dirs['core'])
+        _global_dir = QtCore.QDir(self.extension_dirs['global'])
+        for ext in self.extensions['core'].configs:
+            try:
+                #Check if the extension is in the globals
+                global_extensions = list(self.extensions['global'].configs.keys())
+                if ext['name'] in global_extensions:
+                    continue
+            except KeyError:
+                #If extension not loaded in globals it will raise a KeyError
+                _core_ext_path = _core_dir.absoluteFilePath(ext['name'])
+                _global_ext_path = _global_dir.absoluteFilePath(ext['name'])
+                self.log.info(self.translate("logs", "Core extension {0} was missing from the global extension directory. Copying it into the global extension directory from the core now.".format(ext['name'])))
+                #Copy extension into global directory
+                if QtCore.QFile(_core_ext_path).copy(_global_ext_path):
+                    self.log.debug(self.translate("logs", "Extension config successfully copied."))
+                else:
+                    self.log.debug(self.translate("logs", "Extension config was not copied."))
+
+    def load_libraries(self, ext_type=None):
+        """Loads the currently installed libraries into the users settings.
+                
+        Args:
+          ext_type (string): A specific extension type [global or user] to load extensions from. If not provided, defaults to both.
+        
         NOTE: Relies on save_settings to validate all fields.
 
         Returns:
           List of names (strings) of extensions loaded  on success. Returns False (bool) on failure.
-        
         """
-        installed = self.get_installed()
-        exist = self.core.configs
-        if not exist:
-            self.log.info(self.translate("logs", "No extensions found."))
-            return False
-        for config_path in exist:
-            _config = self.config.load_config(config_path)
-            if _config['name'] in installed.keys():
-                _type = installed[_config['name']]
-                if _type == "global":
-                    _ext_dir = os.path.join(self.extension_dir['global'], _config['name'])
-                elif _type == "user":
-                    _ext_dir = os.path.join(self.extension_dir['user'], _config['name'])
+        extension_types = ['user', 'global']
+        if str(ext_type) in extension_types:
+            extension_types = [ext_type]
+        for type_ in extension_types:
+            saved = []
+            ext_configs = self.extensions[type_].configs
+            if not ext_configs:
+                self.log.info(self.translate("logs", "No extensions of type {0} found.".format(type_)))
+                return False
+            for _config in global_ext:
+                if _config['name'] in installed.keys():
+                    _type = installed[_config['name']]
+                    _ext_dir = os.path.join(self.extension_dirs[type_], _config['name'])
                 else:
-                    self.log.warn(self.translate("logs", "Extension {0} is of an unknown type. It will not be loaded".format(_config['name'])))
-                    continue
-            else:
-                if QtCore.QDir(self.extension_dir['user']).exists(_config['name']):
-                    _ext_dir = os.path.join(self.extension_dir['user'], _config['name'])
-                elif QtCore.QDir(self.extension_dir['global']).exists(_config['name']):
-                    _ext_dir = os.path.join(self.extension_dir['global'], _config['name'])
+                    if QtCore.QDir(self.extension_dirs[type_]).exists(_config['name']):
+                        _ext_dir = os.path.join(self.extension_dirs[type_], _config['name'])
+                    else:
+                        self.log.warn(self.translate("logs", "There is no corresponding data to accompany the config for extension {0}. It will not be loaded".format(_config['name'])))
+                        continue
+                if not self.save_settings(_config, _type):
+                    self.log.warn(self.translate("logs", "Extension {0} could not be saved.".format(_config['name'])))
                 else:
-                    self.log.warn(self.translate("logs", "There is no corresponding data to accompany the config for extension {0}. It will not be loaded".format(_config['name'])))
-                    continue
-            if not self.save_settings(_config, _type):
-                self.log.warn(self.translate("logs", "Extension {0} could not be saved.".format(_config['name'])))
-            else:
-                saved.append(_config['name'])
-        return saved or False
-                
+                    saved.append(_config['name'])
+            return saved or False
 
-    @staticmethod
-    def get_installed():
+    def get_installed(self):
         """Get all installed extensions seperated by type.
 
         Pulls the current installed extensions from the application settings and returns a dictionary with the lists of the two extension types.
@@ -179,14 +243,15 @@ class ExtensionManager(object):
            'contribExtension':"global", 'anotherContrib':"global"}
 
         """
-#        WRITE_TESTS_FOR_ME()
+        self.log.debug(self.translate("logs", "Getting installed extensions."))
         installed_extensions = {}
         _settings = QtCore.QSettings()
         _settings.beginGroup("extensions")
-        extensions = _settings.allKeys()
+        extensions = _settings.childGroups()
         for ext in extensions:
-            installed_extensions[ext] = _settings.value(ext+"/type").toString()
+            installed_extensions[ext] = _settings.value(ext+"/type")
         _settings.endGroup()
+        self.log.debug(self.translate("logs", "The following extensions are installed: [{0}].".format(extensions)))
         return installed_extensions
 
     def get_extension_from_property(self, key, val):
@@ -341,7 +406,7 @@ class ExtensionManager(object):
         main_ext_dir = os.path.join(QtCore.QDir.currentPath(), "extensions")
         main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
         extension_dir = QtCore.QDir.mkpath(os.path.join(main_ext_type_dir, extension_config['name']))
-        extension_files = extension_dir.entryList()
+        extension_files = extension_dirs.entryList()
         if not extension_config['main']:
             if "main.py" in extension_files:
                 extension_config['main'] = "main"
@@ -534,11 +599,11 @@ class ExtensionManager(object):
             return False
         #Name
         if config_validator.name():
-            files = unpacked.entryList()
+            files = unpacked.entryInfoList()
             for file_ in files:
-                if re.match("^.*\.conf$", file_):
-                    config_name = file_
-                    config_path = os.path.join(unpacked.absolutePath(), file_)
+                if file_.suffix() == ".conf":
+                    config_name = file_.fileName()
+                    config_path = file_.absolutePath()
             _config = self.config.load_config(config_path)
             existing_extensions = self.config.find_configs("extension")
             try:
@@ -653,8 +718,6 @@ class ExtensionManager(object):
                 _error = QtCore.QCoreApplication.translate("logs", "Error deleting file.")
                 raise IOError(_error)
         return True
-            
-            
         
 
     def unpack_extension(self, compressed_extension):
@@ -726,10 +789,30 @@ class ConfigManager(object):
         #set function logger
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
+        self.log.debug(self.translate("logs", "Initalizing ConfigManager"))
+        self.configs = []
+        self.directory = None
+        self.paths = []
         if path:
-            self.paths = self.get_paths(path)
-            self.configs = []
-            self.configs = self.get()
+            self.directory = path
+            try:
+                self.paths = self.get_paths(path)
+            except TypeError:
+                self.log.info(self.translate("logs", "No extensions found in the {0} directory".format(path)))
+            else:
+                self.log.info(self.translate("logs", "Extensions found in the {0} directory. Attempting to load extension configs.".format(path)))
+                self.configs = list(self.get())
+
+    def has_configs(self):
+        """Provides the status of a ConfigManagers config files.
+        
+        Returns:
+          bool: True, if there are configs. False, if there are no configs currently.
+        """
+        if self.configs:
+            return True
+        else:
+            return False
             
     def find(self, name=None):
         """
@@ -753,13 +836,13 @@ class ConfigManager(object):
             return False
 
     def get_paths(self, directory):
-        """Returns the paths to all config files within a directory.
+        """Returns the paths to all extensions with config files within a directory.
         
         Args:
           directory (string): The path to the folder that extension's are within. Extensions can be up to one level below the directory given.
         
         Returns:
-          config_files (array): An array of paths to all config files found in the directory given.
+          config_files (array): An array of paths to all extension objects withj config files that were found.
         
         Raises:
           TypeError: If no extensions exist within the directory requested.
@@ -778,20 +861,24 @@ class ConfigManager(object):
         try:
             for root, dirs, files in fs_utils.walklevel(path):
                 for file_name in files:
-                    if file_name.endswith(".conf"):
-                        config_files.append(os.path.join(root, file_name))
+                    if zipfile.is_zipfile(os.path.join(root, file_name)):
+                        ext_zip = zipfile.ZipFile(os.path.join(root, file_name), 'r')
+                        ext_names = ext_zip.namelist()
+                        for member_name in ext_names:
+                            if member_name.endswith(".conf"):
+                                config_files.append(os.path.join(root, file_name))
         except AssertionError:
-            self.log.warn(self.translate("logs", "Config file folder at path {0} does not exist. No Config files loaded.".format(path)))
+            self.log.warn(self.translate("logs", "Extension library at path {0} does not exist. No Config files identified.".format(path)))
             raise
         except TypeError:
-            self.log.warn(self.translate("logs", "No config files found at path {0}. No Config files loaded.".format(path)))
+            self.log.warn(self.translate("logs", "No extensions found at path {0}. No Config files identified.".format(path)))
             raise
         if config_files:
             return config_files
         else:
             raise TypeError(self.translate("logs", "No config files found at path {0}. No Config files loaded.".format(path)))
 
-    def get(self, paths):
+    def get(self, paths=None):
         """
         Generator to retreive config files for the paths passed to it
 
@@ -822,14 +909,28 @@ class ConfigManager(object):
           (bool): On failure returns False
         
         """
+        config = None
+        data = None
         myfile = QtCore.QFile(str(path))
-        if not myfile.exists(myfile.absolutePath()):
+        if not myfile.exists():
             return False
-        try:
-            config = fs_utils.json_load(path)
-        except ValueError, TypeError as _excpt:
-            self.log.warn(self.translate("logs", "Could not load the config file {0}".format(str(path))))
-            self.log.debug(_excpt)
+        if not zipfile.is_zipfile(str(path)):
             return False
+        with zipfile.ZipFile(path, 'r') as zip_ext:
+            for file_name in zip_ext.namelist():
+                if file_name.endswith(".conf"):
+                    config = zip_ext.read(file_name)
+                    self.log.debug(self.translate("logs", "Config found in extension {0}.".format(path)))
+        if config:
+            try:
+                data = json.loads(config.decode('utf-8'))
+                self.log.info(self.translate("logs", "Successfully loaded {0}'s config file.".format(path)))
+            except ValueError:
+                self.log.warn(self.translate("logs", "Failed to load {0} due to a non-json or otherwise invalid file type".format(path)))
+                return False
+        if data:
+            self.log.debug(self.translate("logs", "Config file loaded.".format(path)))
+            return data
         else:
-            return config
+            self.log.debug(self.translate("logs", "Failed to load config file.".format(path)))
+            return False
