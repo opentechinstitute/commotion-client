@@ -29,6 +29,10 @@ commotion_client/data/extensions/*
 #compiled clients
 build/exe*
 build/lib
+build/resources
+
+#testing objects
+tests/temp
 
 #auto-created commotion on failure of everywhere else
 commotion.log
