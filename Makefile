@@ -1,4 +1,4 @@
-.PHONY: build windows osx debian clean install
+.PHONY: build windows osx debian clean install tests
 
 all: build windows debian osx
 
@@ -11,8 +11,6 @@ build: clean extensions assets
 assets: build_tree
 	pyrcc4 -py3 commotion_client/assets/commotion_assets.qrc -o build/resources/commotion_assets_rc.py
 
-test: clean build
-	@echo "test build complete"
 
 windows:
 	@echo "windows compileing is not yet implemented"
@@ -29,7 +27,14 @@ debian:
 build_tree:
 	mkdir build/resources || true
 
+test: tests
+	@echo "test build complete"
+
+tests: clean build
+	python3.3 tests/run_tests.py
+
 clean: 
 	python3.3 build/scripts/build.py clean
 	rm -fr build/resources/*
 	rm -fr build/exe.* || true
+	rm -fr tests/temp/*
