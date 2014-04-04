@@ -1,4 +1,3 @@
-
 # Build Documentation
 
 ## Build Folder Structure
@@ -84,4 +83,7 @@ Linux:
   * type ```make linux```
   * The executables folder will be created in the build directory.
   * run the ```Commotion``` executable in the executables folder.
-  
+
+### The setup script
+
+The setup.py script in the root directory is not a traditional distutils setup.py script. It is actually a customized cx_freeze setup script. You can find documentation for it on the [cx_freeze docs site](http://cx-freeze.readthedocs.org/en/latest/distutils.html) and a searchable mailing list on [sourceforge](http://sourceforge.net/p/cx-freeze/mailman/cx-freeze-users/).
