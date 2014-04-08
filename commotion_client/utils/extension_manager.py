@@ -297,7 +297,7 @@ class ExtensionManager(object):
             return saved or []
 
     def get_extension_from_property(self, key, val):
-        """Takes a property and returns all extensions who have the passed value set under the passed property.
+        """Takes a property and returns all INSTALLED extensions who have the passed value set under the passed property.
 
         Checks all installed extensions and returns the name of all extensions whose config contains the key:val pair passed to this function.
 
@@ -312,8 +312,6 @@ class ExtensionManager(object):
         Raises:
           KeyError: If the value requested is non-standard.
         """
-#        WRITE_TESTS_FOR_ME()
-#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         matching_extensions = []
         if key not in self.config_keys:
             _error = self.translate("logs", "{0} is not a valid extension config value.".format(key))

@@ -154,7 +154,23 @@ class ExtensionLibraries(ExtensionSettingsTestCase):
         #test not initialize an existing, intialized, extension
 
     def test_get_extension_from_property(self):
-        self.fail("This test for function get_extension_from_property (line 257) needs to be implemented")
+        #setup directory with extension
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        #setup config
+        self.ext_mgr.init_extension_config("user")
+        #Install loaded configs
+        self.ext_mgr.install_loaded()
+        
+        has_value = self.ext_mgr.get_extension_from_property("menu_item", "Commotion Config File Editor")
+        self.assertIn("config_editor", has_value)
+        #key MUST be one of the approved keys
+        with self.assertRaises(KeyError):
+            self.ext_mgr.get_extension_from_property('pineapple', "made_of_fire")
+        does_not_have = self.ext_mgr.get_extension_from_property("menu_item", "I am not called this")
+        self.assertNotIn("config_editor", does_not_have)
+        
+
+
         
     def test_get_property(self):
         self.fail("This test for function get_property (line 302) needs to be implemented")
