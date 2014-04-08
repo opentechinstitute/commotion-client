@@ -10,6 +10,28 @@ Key componenets handled within:
  * finding, loading, and unloading extensions
  * installing extensions
 
+-----------
+Definitions:
+-----------
+
+Library: The [core, user, & global] folders that hold the extension zip archives.
+
+Loaded: An extension (Library) that has been found by the ExtensionManager and has had its config loaded into one of the ConfigManagers [core, global, user].
+
+Installed: An extension that has been saved into the [user or global] applications settings. On initial installation the extension will be set to initialized and show up in the main extension settings menu.
+
+Initialized: An installed extension that has had its "initialized" flag set to true. Initalized applications show up in the menu and have a personal settings page if enabled.
+
+Disabled: An installed extension that has had its "initialized" flag set to false. Disabled applications will not show up in the menu or have their personal settings page enabled, but will still show up in the main extension settings menu.
+
+Uninstalled: An extension that has been removed from the application settings and also had its library deleted from all extension directories [user global]
+
+Core Extensions: Core extensions are extensions that are loaded along with the application. On restart these extensions are checked against the global extensions, and if missing copied into the global extension directory and re-installed.
+
+Global Extensions: Global extensions are extensions that are available for all logged in users.
+
+User Extensions: User extensions are extensions that are only installed for the current user.
+
 """
 #Standard Library Imports
 import logging
@@ -27,6 +49,7 @@ from PyQt4 import QtCore
 #Commotion Client Imports
 from commotion_client.utils import fs_utils
 from commotion_client.utils import validate
+from commotion_client.utils import settings
 from commotion_client import extensions
 
 class ExtensionManager(object):
@@ -35,22 +58,42 @@ class ExtensionManager(object):
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
         self.extensions = {}
-        self.extension_dirs = {}
-        self.config_values = ["name",
+        self.libraries = {}
+        self.user_settings = self.get_user_settings()
+        self.config_keys = ["name",
                               "main",
                               "menu_item",
                               "menu_level",
                               "parent",
                               "settings",
                               "toolbar",
-                              "tests"]
+                              "tests",
+                              "initialized",]
 
+    def get_user_settings(self):
+        """Get the currently logged in user settings object."""
+        settings_manager = settings.UserSettingsManager()
+        _settings = settings_manager.get()
+        if _settings.Scope() == 0:
+            _settings.beginGroup("extensions")
+            return _settings
+        else:
+            raise TypeError(self.translate("logs", "User settings has a global scope and will not be loaded. Because, security."))
+
+    
     def init_extension_libraries(self):
+        """This function bootstraps the Commotion client when the settings are not populated on first boot or due to error. It iterates through all extensions in the core client and loads them."""
+        
+        #set default library paths
         self.set_library_defaults()
+        #create directory structures if needed
         self.init_libraries()
-        self.load_core()
+        #load core and move to global if needed
+        self.load_install_core()
+        #Load all extension configs found in libraries
         self.init_extension_config()
-        self.load_libraries()
+        #install all loaded config's
+        self.install_loaded()
 
     def set_library_defaults(self):
         """Sets the default directories for core, user, and global extensions.
@@ -77,7 +120,7 @@ class ExtensionManager(object):
         _app_path = QtCore.QDir(QtCore.QCoreApplication.applicationDirPath())
         _app_path.setPath("extensions")
         #set the core extension directory
-        self.extension_dirs['core'] = _app_path.absolutePath()
+        self.libraries['core'] = _app_path.absolutePath()
         self.log.debug(self.translate("logs", "Core extension directory succesfully set."))
 
         #==== SYSTEM DEFAULTS =====#
@@ -107,16 +150,16 @@ class ExtensionManager(object):
             #move the root directory to the correct sub-path.
             ext_dir.setPath(ext_path)
             #Set the extension directory.
-            self.extension_dirs[path_type] = ext_dir.absolutePath()
+            self.libraries[path_type] = ext_dir.absolutePath()
 
     def init_libraries(self):
-        """Creates an extension folder, if it does not exit, in the operating systems default application data directories for the current user and for the global application. """
+        """Creates a library folder, if it does not exit, in the directories specified for the current user and for the global application. """
         #==== USER & GLOBAL =====#
         for path_type in ['user', 'global']:
             try:
-                ext_dir = QtCore.QDir(self.extension_dirs[path_type])
+                ext_dir = QtCore.QDir(self.libraries[path_type])
             except KeyError:
-                self.log.warn(self.translate("logs", "No directory is specified for the {0} library. Try running set_library_defaults to initalize the default libraries.".format(path_type)))
+                self.log.warning(self.translate("logs", "No directory is specified for the {0} library. Try running set_library_defaults to initalize the default libraries.".format(path_type)))
                 #If the directories are not yet created. We are not going to have this fail.
                 continue
             if not ext_dir.exists():
@@ -144,7 +187,7 @@ class ExtensionManager(object):
             else:
                 raise ValueError(self.translate("logs", "{0} is not an acceptable extension type.".format(ext_type)))
         for type_ in extension_types:
-            self.extensions[type_] = ConfigManager(self.extension_dirs[type_])
+            self.extensions[type_] = ConfigManager(self.libraries[type_])
             self.log.debug(self.translate("logs", "Configs for {0} extension library loaded..".format(type_)))
 
     def check_installed(self, name=None):
@@ -167,17 +210,39 @@ class ExtensionManager(object):
             self.log.debug(self.translate("logs", "Extension/s NOT found."))
             return False
 
+    def get_installed(self):
+        """Get all installed extensions seperated by type.
+
+        Pulls the current installed extensions from the application settings and returns a dictionary with the lists of the two extension types.
+
+        Returns:
+          A dictionary keyed by the names of all extensions with the values being if they are a user extension or a global extension.
+
+          {'coreExtensionOne':"user", 'coreExtensionTwo':"global",
+           'contribExtension':"global", 'anotherContrib':"global"}
+
+        """
+        self.log.debug(self.translate("logs", "Getting installed extensions."))
+        installed_extensions = {}
+        _settings = self.user_settings
+        extensions = _settings.childGroups()
+        for ext in extensions:
+            installed_extensions[ext] = _settings.value(ext+"/type")
+        self.log.debug(self.translate("logs", "The following extensions are installed: [{0}].".format(extensions)))
+        return installed_extensions
+            
     def load_core(self):
-        """Loads all core extensions into the globals library and global settings.
+        """Loads all core extensions into the globals library and re-initialized the global config.
         
-        This function bootstraps the Commotion client when the settings are not populated on first boot or due to error. It iterates through all extensions in the core client and loads them.
+        This function bootstraps global library from the core library. It iterates through all extensions in the core library and populates the global config with any extensions it does not already contain and then loads them into the global config.
 
         """
         #Core extensions are loaded from the global directory.
         #If a core extension has been deleted from the global directory it will be replaced from the core directory.
         self.init_extension_config('core')
-        _core_dir = QtCore.QDir(self.extension_dirs['core'])
-        _global_dir = QtCore.QDir(self.extension_dirs['global'])
+        _core_dir = QtCore.QDir(self.libraries['core'])
+        _global_dir = QtCore.QDir(self.libraries['global'])
+        _reload_globals = False
         for ext in self.extensions['core'].configs:
             try:
                 #Check if the extension is in the globals
@@ -194,65 +259,42 @@ class ExtensionManager(object):
                     self.log.debug(self.translate("logs", "Extension config successfully copied."))
                 else:
                     self.log.debug(self.translate("logs", "Extension config was not copied."))
+                _reload_globals = True
+        if _reload_globals == True:
+            self.init_extension_config("global")
 
-    def load_libraries(self, ext_type=None):
-        """Loads the currently installed libraries into the users settings.
+    def install_loaded(self, ext_type=None):
+        """Installs loaded libraries by saving their settings into the application settings.
                 
         Args:
           ext_type (string): A specific extension type [global or user] to load extensions from. If not provided, defaults to both.
-        
-        NOTE: Relies on save_settings to validate all fields.
 
         Returns:
-          List of names (strings) of extensions loaded  on success. Returns False (bool) on failure.
+          List of names (strings) of extensions loaded  on success. Returns and empty list [] on failure.
+        
+        Note on validation: Relies on save_settings to validate all fields.
+        Note on core: Core extensions are never "installed" they are used to populate the global library and then installed under global settings.
+        
         """
+        _keys = self.user_settings.allKeys()
         extension_types = ['user', 'global']
-        if str(ext_type) in extension_types:
+        if ext_type and str(ext_type) in extension_types:
             extension_types = [ext_type]
         for type_ in extension_types:
             saved = []
             ext_configs = self.extensions[type_].configs
             if not ext_configs:
-                self.log.info(self.translate("logs", "No extensions of type {0} found.".format(type_)))
-                return False
-            for _config in global_ext:
-                if _config['name'] in installed.keys():
-                    _type = installed[_config['name']]
-                    _ext_dir = os.path.join(self.extension_dirs[type_], _config['name'])
-                else:
-                    if QtCore.QDir(self.extension_dirs[type_]).exists(_config['name']):
-                        _ext_dir = os.path.join(self.extension_dirs[type_], _config['name'])
+                self.log.info(self.translate("logs", "No extensions of type {0} are currently loaded.".format(type_)))
+                return []
+            for _config in ext_configs:
+                #Only install if not already installed in this section.
+                if _config['name'] not in _keys:
+                    #Attempt to save the extension.
+                    if not self.save_settings(_config, type_):
+                        self.log.warning(self.translate("logs", "Extension {0} could not be saved.".format(_config['name'])))
                     else:
-                        self.log.warn(self.translate("logs", "There is no corresponding data to accompany the config for extension {0}. It will not be loaded".format(_config['name'])))
-                        continue
-                if not self.save_settings(_config, _type):
-                    self.log.warn(self.translate("logs", "Extension {0} could not be saved.".format(_config['name'])))
-                else:
-                    saved.append(_config['name'])
-            return saved or False
-
-    def get_installed(self):
-        """Get all installed extensions seperated by type.
-
-        Pulls the current installed extensions from the application settings and returns a dictionary with the lists of the two extension types.
-
-        Returns:
-          A dictionary keyed by the names of all extensions with the values being if they are a user extension or a global extension.
-
-          {'coreExtensionOne':"user", 'coreExtensionTwo':"global",
-           'contribExtension':"global", 'anotherContrib':"global"}
-
-        """
-        self.log.debug(self.translate("logs", "Getting installed extensions."))
-        installed_extensions = {}
-        _settings = QtCore.QSettings()
-        _settings.beginGroup("extensions")
-        extensions = _settings.childGroups()
-        for ext in extensions:
-            installed_extensions[ext] = _settings.value(ext+"/type")
-        _settings.endGroup()
-        self.log.debug(self.translate("logs", "The following extensions are installed: [{0}].".format(extensions)))
-        return installed_extensions
+                        saved.append(_config['name'])
+            return saved or []
 
     def get_extension_from_property(self, key, val):
         """Takes a property and returns all extensions who have the passed value set under the passed property.
@@ -273,31 +315,23 @@ class ExtensionManager(object):
 #        WRITE_TESTS_FOR_ME()
 #        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         matching_extensions = []
-        if value not in self.config_values:
-            _error = self.translate("logs", "That is not a valid extension config value.")
+        if key not in self.config_keys:
+            _error = self.translate("logs", "{0} is not a valid extension config value.".format(key))
             raise KeyError(_error)
-        _settings = QtCore.QSettings()
-        _settings.beginGroup("extensions")
-        ext_sections = ['core', 'contrib']
-        for ext_type in ext_sections:
-            #enter extension type group
-            _settings.beginGroup(ext_type)
-            all_exts = _settings.allKeys()
-            #QtCore.QStringList from allKeys() is missing the .toList() method from to its QtCore.QVariant.QStringList version. So, we do this horrible while loop instead. 
-            while all_exts.isEmpty() != True:
-                current_extension = all_exts.takeFirst()
-                #enter extension settings
-                _settings.beginGroup(current_extension)
-                if _settings.value(key).toString() == str(val):
-                    matching_extensions.append(current_extension)
-                #exit extension
-                _settings.endGroup()
-            #exit extension type group
+        _settings = self.user_settings
+        all_exts = _settings.childGroups()
+        for current_extension in all_exts:
+            #enter extension settings
+            _settings.beginGroup(current_extension)
+            if _settings.value(key) == val:
+                matching_extensions.append(current_extension)
+            #exit extension
             _settings.endGroup()
         if matching_extensions:
             return matching_extensions
         else:
-            self.log.debug(self.translate("logs", "No extensions had the requested value."))
+            self.log.info(self.translate("logs", "No extensions had the requested value."))
+            return []
 
     def get_property(self, name, key):
         """
@@ -315,17 +349,18 @@ class ExtensionManager(object):
         """
 #        WRITE_TESTS_FOR_ME()
 #        FIX_ME_FOR_NEW_EXTENSION_TYPES()
-        if value not in self.config_values:
+        if key not in self.config_keys:
             _error = self.translate("logs", "That is not a valid extension config value.")
             raise KeyError(_error)
-        _settings = QtCore.QSettings()
-        _settings.beginGroup("extensions")
+        _settings = self.user_settings
         ext_type = self.get_type(name)
         _settings.beginGroup(ext_type)
         _settings.beginGroup(name)
         setting_value = _settings.value(key)
         if setting_value.isNull():
             _error = self.translate("logs", "The extension config does not contain that value.")
+            _settings.endGroup()
+            _settings.endGroup()
             raise KeyError(_error)
         else:
             return setting_value.toStr()
@@ -344,8 +379,7 @@ class ExtensionManager(object):
         """
 #        WRITE_TESTS_FOR_ME()
 #        FIX_ME_FOR_NEW_EXTENSION_TYPES()
-        _settings = QtCore.QSettings()
-        _settings.beginGroup("extensions")
+        _settings = self.user_settings
         core_ext = _settings.value("core/"+str(name))
         contrib_ext = _settings.value("contrib/"+str(name))
         if not core_ext.isNull() and contrib_ext.isNull():
@@ -398,8 +432,7 @@ class ExtensionManager(object):
         extension_config = {"name":extension_name}
         extension_type = self.extensions[extension_name]
         
-        _settings = QtCore.QSettings()
-        _settings.beginGroup("extensions")
+        _settings = self.user_settings
         _settings.beginGroup(extension_type)
         extension_config['main'] = _settings.value("main").toString()
         #get extension dir
@@ -423,7 +456,6 @@ class ExtensionManager(object):
             if "tests.py" in extension_files:
                 extension_config['tests'] = "tests"
         _settings.endGroup()
-        _settings.endGroup()
         return extension_config
 
     def remove_extension_settings(self, name):
@@ -434,8 +466,7 @@ class ExtensionManager(object):
 #        WRITE_TESTS_FOR_ME()
 #        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         if len(str(name)) > 0:
-            _settings = QtCore.QSettings()
-            _settings.beginGroup("extensions")
+            _settings = self.user_settings
             _settings.remove(str(name))
         else:
             _error = self.translate("logs", "You must specify an extension name greater than 1 char.")
@@ -457,11 +488,10 @@ class ExtensionManager(object):
         exception: Description.
         
         """
-        _settings = QtCore.QSettings()
-        _settings.beginGroup("extensions")
+        _settings = self.user_settings
         #get extension dir
         try:
-            extension_dir = self.extension_dirs[extension_type]
+            extension_dir = self.libraries[extension_type]
         except KeyError:
             self.log.warn(self.translate("logs", "Invalid extension type. Please check the extension type and try again."))
             return False
@@ -473,7 +503,7 @@ class ExtensionManager(object):
                 extension_name = extension_config['name']
                 _settings.beginGroup(extension_name)
             except KeyError:
-                _error = self.translate("logs", "The extension is missing a  name value which is required.")
+                _error = self.translate("logs", "The extension is missing a name value which is required.")
                 self.log.error(_error)
                 return False
         else:
@@ -487,9 +517,9 @@ class ExtensionManager(object):
             except KeyError:
                 if config_validator.main():
                     _main = "main" #Set this for later default values
-                    _settings.value("main", "main").toString()
+                    _settings.setValue("main", "main")
                 else:
-                    _settings.value("main", _main).toString()
+                    _settings.setValue("main", _main)
         else:
             _error = self.translate("logs", "The config's main value is invalid and cannot be saved.")
             self.log.error(_error)
@@ -501,9 +531,9 @@ class ExtensionManager(object):
                     _config_value = extension_config[val]
                 except KeyError:
                     #Defaults to main, which was checked and set before
-                    _settings.value(val, _main).toString()
+                    _settings.setValue(val, _main)
                 else:
-                    _settings.value(val, _config_value).toString()
+                    _settings.setValue(val, _config_value)
             else:
                 _error = self.translate("logs", "The config's {0} value is invalid and cannot be saved.".format(val))
                 self.log.error(_error)
@@ -511,10 +541,10 @@ class ExtensionManager(object):
         #Extension Parent
         if config_validator.parent():
             try:
-                _settings.value("parent", extension_config["parent"]).toString()
+                _settings.setValue("parent", extension_config["parent"])
             except KeyError:
                 self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "parent")))
-                _settings.value("parent", "Extensions").toString()
+                _settings.setValue("parent", "Extensions")
         else:
             _error = self.translate("logs", "The config's parent value is invalid and cannot be saved.")
             self.log.error(_error)
@@ -523,10 +553,10 @@ class ExtensionManager(object):
         #Extension Menu Item
         if config_validator.menu_item():
             try:
-                _settings.value("menu_item", extension_config["menu_item"]).toString()
+                _settings.setValue("menu_item", extension_config["menu_item"])
             except KeyError:
                 self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "menu_item")))
-                _settings.value("menu_item", extension_name).toString()
+                _settings.setValue("menu_item", extension_name)
         else:
             _error = self.translate("logs", "The config's menu_item value is invalid and cannot be saved.")
             self.log.error(_error)
@@ -534,10 +564,10 @@ class ExtensionManager(object):
         #Extension Menu Level
         if config_validator.menu_level():
             try:
-                _settings.value("menu_level", extension_config["menu_level"]).toInt()
+                _settings.setValue("menu_level", extension_config["menu_level"])
             except KeyError:
                 self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "menu_level")))
-                _settings.value("menu_level", 10).toInt()
+                _settings.setValue("menu_level", 10)
         else:
             _error = self.translate("logs", "The config's menu_level value is invalid and cannot be saved.")
             self.log.error(_error)
@@ -545,16 +575,17 @@ class ExtensionManager(object):
         #Extension Tests
         if config_validator.tests():
             try:
-                _settings.value("main", extension_config['tests']).toString()
+                _settings.setValue("main", extension_config['tests'])
             except KeyError:
                 self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "tests")))
-                _settings.value("tests", "tests").toString()
+                _settings.setValue("tests", "tests")
         else:
             _error = self.translate("logs", "Extension {0} does not contain the {1} file listed in the config for its tests. Please either remove the listing to allow for the default value, or add the appropriate file.".format(extension_config['name'], _config_value))
             self.log.error(_error)
             return False
         #Write extension type
-        _settings.value("type", extension_type)
+        _settings.setValue("type", extension_type)
+        _settings.setValue("initialized", True)
         _settings.endGroup()
         return True
 
