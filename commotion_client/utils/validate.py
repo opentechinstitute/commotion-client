@@ -73,7 +73,7 @@ class ClientConfig(object):
         if not value_dir.exists():
             raise NotADirectoryError(self.translate("logs", "The directory should, by definition, actually be a directory. What was submitted was not a directory. Please specify the directory of an existing extension to continue."))
         #Check that there are files in the directory provided
-        value_dir.setFilter(QtCore.QDir.NotDotAndDotDot|QtCore.QDir.NoSymLinks)
+        value_dir.setFilter(QtCore.QDir.NoDotAndDotDot|QtCore.QDir.NoSymLinks)
         if not value_dir.entryList():
             raise FileNotFoundError(self.translate("logs", "There are no files in the extension directory provided. Is an extension directory without any files an extension directory at all? We will ponder these mysteries while you check to see if the extension directory provided is correct." ))
         #Check that we can read the directory and its files. Sadly, QDir.isReadable() is broken on a few platforms so we check that and use the file filter to check each file.
