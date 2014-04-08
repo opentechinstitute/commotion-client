@@ -1,4 +1,5 @@
 
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -48,7 +49,7 @@ class ClientConfig(object):
     @property
     def config(self):
         """Return the config value."""
-        return self.config
+        return self._config
 
     @config.setter
     def config(self, value):
@@ -57,13 +58,13 @@ class ClientConfig(object):
             raise KeyError(self.translate("logs", "The config file must contain at least a name value."))
         for val in value.keys():
             if val not in self.config_values:
-                raise KeyError(self.translate("logs", "The config file specified has values within it that are not allowed."))
-        self.config = value
+                raise KeyError(self.translate("logs", "The config file specified has the value {0} within it which is not a valid value.".format(val)))
+        self._config = value
                                      
 
     @property
     def directory(self):
-        return self.directory
+        return self._directory
 
     @directory.setter
     def directory(self, value):
@@ -80,7 +81,7 @@ class ClientConfig(object):
         file_list = value_dir.entryInfoList()
         if not file_list or not value_dir.isReadable():
             raise PermissionError(self.translate("logs", "The application does not have permission to read any files within this directory. How is it supposed to validate the extension then? You ask. It can't. Please modify the permissions on the directory to allow the application to read the files within."))
-        self.directory = value
+        self._directory = value
 
     def validate_all(self):
         """Run all validation functions on an uncompressed extension.
