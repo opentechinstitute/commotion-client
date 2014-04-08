@@ -14,7 +14,6 @@ class ExtensionSettingsTestCase(unittest.TestCase):
         self.app = QtGui.QApplication([])
         self.app.setOrganizationName("test_case");
         self.app.setApplicationName("testing_app");
-        self.settings = QtCore.QSettings()
         self.ext_mgr = extension_manager.ExtensionManager()
         
         
@@ -22,8 +21,8 @@ class ExtensionSettingsTestCase(unittest.TestCase):
         self.app.deleteLater()
         del self.app
         self.app = None
+        self.ext_mgr.user_settings.clear()
         self.ext_mgr = None
-        self.settings.clear()
         #Delete everything under tests/temp
         for root, dirs, files in os.walk(os.path.abspath("tests/temp/"), topdown=False):
             for name in files:
@@ -39,17 +38,18 @@ class LoadConfigSettings(ExtensionSettingsTestCase):
       
     """
     def test_load_core_ext(self):
-        """Test that all core extension directories are saved upon running load_all."""
+        """Test that all core extension directories are loaded upon running load_core."""
         #get all extensions currently loaded
-        self.ext_mgr.extension_dirs['core'] = os.path.abspath("tests/mock/extensions/")
-        self.ext_mgr.extension_dirs['global'] = os.path.abspath("tests/temp/")
-        global_dir = QtCore.QDir(self.ext_mgr.extension_dirs['global'])
+        self.ext_mgr.libraries['core'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.libraries['global'] = os.path.abspath("tests/temp/")
+        global_dir = QtCore.QDir(self.ext_mgr.libraries['global'])
         global_exts = global_dir.entryList(QtCore.QDir.AllDirs|QtCore.QDir.NoDotAndDotDot)
         loaded = self.ext_mgr.load_core()
-        self.settings.beginGroup("extensions")
-        k = self.settings.allKeys()
+        self.ext_mgr.user_settings.beginGroup("extensions")
+        k = self.ext_mgr.user_settings.allKeys()
         for ext in global_exts:
-            self.assertTrue(k.contains(ext), "Core extension {0} should have been loaded, but was not.".format(ext))
+            contains = (ext in k)
+            self.assertTrue(contains, "Core extension {0} should have been loaded, but was not.".format(ext))
 
     def test_init_extension_config(self):
         """Test that init extension config properly handles the various use cases."""
@@ -58,21 +58,21 @@ class LoadConfigSettings(ExtensionSettingsTestCase):
             self.ext_mgr.init_extension_config('pineapple')
 
         #Check for an empty directory.
-        self.ext_mgr.extension_dirs['user'] = os.path.abspath("tests/temp/")
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/temp/")
         self.ext_mgr.init_extension_config('user')
         self.assertFalse(self.ext_mgr.extensions['user'].has_configs())
         self.ext_mgr.extensions['user'] = None
 
         #populate with populated directory
-        self.ext_mgr.extension_dirs['user'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
         self.ext_mgr.init_extension_config('user')
         self.assertTrue(self.ext_mgr.extensions['user'].has_configs())
         self.ext_mgr.extensions['user'] = None
         
         #check all types on default call
-        self.ext_mgr.extension_dirs['user'] = os.path.abspath("tests/mock/extensions/")
-        self.ext_mgr.extension_dirs['global'] = os.path.abspath("tests/mock/extensions/")
-        self.ext_mgr.extension_dirs['core'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.libraries['global'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.libraries['core'] = os.path.abspath("tests/mock/extensions/")
         self.ext_mgr.init_extension_config()
         self.assertTrue(self.ext_mgr.extensions['user'].has_configs())
         self.assertTrue(self.ext_mgr.extensions['global'].has_configs())
@@ -88,8 +88,8 @@ class GetConfigSettings(ExtensionSettingsTestCase):
         empty_inst = self.ext_mgr.get_installed()
         self.assertEqual(empty_inst, {})
         #add a value to settings
-        self.settings.setValue("extensions/test/type", "global")
-        self.settings.sync()
+        self.ext_mgr.user_settings.setValue("test/type", "global")
+        self.ext_mgr.user_settings.sync()
         one_item = self.ext_mgr.get_installed()
         self.assertEqual(len(one_item), 1)
         self.assertIn("test", one_item)
@@ -101,8 +101,8 @@ class GetConfigSettings(ExtensionSettingsTestCase):
         self.assertFalse(self.ext_mgr.check_installed())
         self.assertFalse(self.ext_mgr.check_installed("test"))
         #add a value to settings
-        self.settings.setValue("extensions/test/type", "global")
-        self.settings.sync()
+        self.ext_mgr.user_settings.setValue("test/type", "global")
+        self.ext_mgr.user_settings.sync()
         self.assertTrue(self.ext_mgr.check_installed())
         self.assertTrue(self.ext_mgr.check_installed("test"))
         self.assertFalse(self.ext_mgr.check_installed("pineapple"))
@@ -110,16 +110,48 @@ class GetConfigSettings(ExtensionSettingsTestCase):
 class ExtensionLibraries(ExtensionSettingsTestCase):
 
     def test_init_libraries(self):
-        """Tests that the extension_dir libraries are created when provided and fail gracefully when not. """
+        """Tests that the library are created when provided and fail gracefully when not. """
+
+        #init libraries from library defaults
+        self.ext_mgr.set_library_defaults()
+        user_dir = self.ext_mgr.libraries['user']
+        global_dir = self.ext_mgr.libraries['global']
         self.ext_mgr.init_libraries()
-        self.ext_mgr.extension_dirs['user'] = os.path.abspath("tests/temp/oneLevel/")
-        self.ext_mgr.extension_dirs['global'] = os.path.abspath("tests/temp/oneLevel/twoLevel/")
+        self.assertTrue(os.path.isdir(os.path.abspath(user_dir)))
+        self.assertTrue(os.path.isdir(os.path.abspath(global_dir)))
+        #assert that init libraries works with non-default paths.
+        
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/temp/oneLevel/")
+        self.ext_mgr.libraries['global'] = os.path.abspath("tests/temp/oneLevel/twoLevel/")
         self.ext_mgr.init_libraries()
         self.assertTrue(os.path.isdir(os.path.abspath("tests/temp/oneLevel/twoLevel/")))
         self.assertTrue(os.path.isdir(os.path.abspath("tests/temp/oneLevel/")))
 
-    def test_load_librarys(self):
-        self.fail("This test for function load_libraries (line 198) needs to be implemented")
+    def test_install_loaded(self):
+        """ Tests that all loaded, and currently uninstalled, libraries are installed"""
+        #setup directory with extension
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        #setup empty directory
+        self.ext_mgr.libraries['global'] = os.path.abspath("tests/temp/global/")
+        #setup paths and configs
+        self.ext_mgr.init_libraries()
+        self.ext_mgr.init_extension_config("user")
+        self.ext_mgr.init_extension_config("global")
+        #run function
+        user_installed = self.ext_mgr.install_loaded()
+        self.assertEqual(user_installed, ["config_editor"])
+
+        #Test that the mock extension was loaded
+        self.assertTrue(self.ext_mgr.check_installed("config_editor"))
+        #Test that ONLY the mock extension was loaded and in the user section
+        one_item_only = self.ext_mgr.get_installed()
+        self.assertEqual(len(one_item_only), 1)
+        self.assertIn("config_editor", one_item_only)
+        self.assertEqual(one_item_only['config_editor'], 'user')
+        #Test that the config_manager was "initialized".
+        initialized = self.ext_mgr.get_extension_from_property("initialized", True)
+        self.assertIn("config_editor", initialized)
+        #test not initialize an existing, intialized, extension
 
     def test_get_extension_from_property(self):
         self.fail("This test for function get_extension_from_property (line 257) needs to be implemented")
