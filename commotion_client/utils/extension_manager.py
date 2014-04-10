@@ -89,10 +89,10 @@ class ExtensionManager(object):
         #create directory structures if needed
         self.init_libraries()
         #load core and move to global if needed
-        self.load_install_core()
+        self.load_core()
         #Load all extension configs found in libraries
         self.init_extension_config()
-        #install all loaded config's
+        #install all loaded config's with the existing settings
         self.install_loaded()
 
     def set_library_defaults(self):
@@ -265,7 +265,9 @@ class ExtensionManager(object):
 
     def install_loaded(self, ext_type=None):
         """Installs loaded libraries by saving their settings into the application settings.
-                
+
+        This function will install all loaded libraries into the users settings. It will add any missing configs and values that are not found. If a value exists install loaded will not change it.
+        
         Args:
           ext_type (string): A specific extension type [global or user] to load extensions from. If not provided, defaults to both.
 
@@ -276,16 +278,17 @@ class ExtensionManager(object):
         Note on core: Core extensions are never "installed" they are used to populate the global library and then installed under global settings.
         
         """
-        _keys = self.user_settings.allKeys()
+        _settings = self.user_settings
+        _keys = _settings.childKeys()
         extension_types = ['user', 'global']
         if ext_type and str(ext_type) in extension_types:
             extension_types = [ext_type]
+        saved = []
         for type_ in extension_types:
-            saved = []
             ext_configs = self.extensions[type_].configs
             if not ext_configs:
                 self.log.info(self.translate("logs", "No extensions of type {0} are currently loaded.".format(type_)))
-                return []
+                continue
             for _config in ext_configs:
                 #Only install if not already installed in this section.
                 if _config['name'] not in _keys:
@@ -294,7 +297,17 @@ class ExtensionManager(object):
                         self.log.warning(self.translate("logs", "Extension {0} could not be saved.".format(_config['name'])))
                     else:
                         saved.append(_config['name'])
-            return saved or []
+                else:
+                    modified_config = False
+                    _settings.beginGroup(_config['name'])
+                    for key in _config.keys():
+                        if not _settings.value(key):
+                            modified_config = True
+                            _settings.setValue(key, _config[key])
+                    _settings.endGroup()
+                    if modified_config:
+                        saved.append(_config['name'])
+        return saved
 
     def get_extension_from_property(self, key, val):
         """Takes a property and returns all INSTALLED extensions who have the passed value set under the passed property.
@@ -333,77 +346,84 @@ class ExtensionManager(object):
 
     def get_property(self, name, key):
         """
-        Get a property of an installed extension.
+        Get a property of an installed extension from the user settings.
+
         
         Args:
           name (string): The extension's name.
           key (string): The key of the value you are requesting from the extension.
 
         Returns:
-          A STRING containing the value associated the extensions key in the applications saved extension settings.
+          A the (string) value associated the extensions key in the applications saved extension settings.
         
         Raises:
           KeyError: If the value requested is non-standard.
         """
-#        WRITE_TESTS_FOR_ME()
-#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         if key not in self.config_keys:
             _error = self.translate("logs", "That is not a valid extension config value.")
             raise KeyError(_error)
         _settings = self.user_settings
-        ext_type = self.get_type(name)
-        _settings.beginGroup(ext_type)
         _settings.beginGroup(name)
         setting_value = _settings.value(key)
-        if setting_value.isNull():
+        if not setting_value:
             _error = self.translate("logs", "The extension config does not contain that value.")
             _settings.endGroup()
+            raise KeyError(_error)
+        else:
             _settings.endGroup()
-            raise KeyError(_error)
-        else:
-            return setting_value.toStr()
-
-    def get_type(self, name):
-        """Returns the extension type of an installed extension.
-        
-        Args:
-          name (string): the name of the extension
-        
-        Returns:
-          A string with the type of extension. "Core" or "Contrib"
-        
-        Raises:
-          KeyError: If an extension does not exist.
-        """
-#        WRITE_TESTS_FOR_ME()
-#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
-        _settings = self.user_settings
-        core_ext = _settings.value("core/"+str(name))
-        contrib_ext = _settings.value("contrib/"+str(name))
-        if not core_ext.isNull() and contrib_ext.isNull():
-            return "core"
-        elif not contrib_ext.isNull() and core_ext.isNull():
-            return "contrib"
-        else:
-            _error = self.translate("logs", "This extension does not exist.")
-            raise KeyError(_error)
+            return setting_value
 
     def load_user_interface(self, extension_name, subsection=None):
         """Return the full extension object or one of its primary sub-objects (settings, main, toolbar)
-        
-        @param extension_name string The extension to load
-        @subsection string Name of a objects sub-section. (settings, main, or toolbar)
+
+        Args:
+          extension_name (string): The extension to load
+          subsection (string): Name of a objects sub-section. (settings, main, or toolbar)
+
+        Returns:
+          The ( <UI Type> class) contained within the <extension_name> module.
         """
-#        WRITE_TESTS_FOR_ME()
-#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+        
         user_interface_types = {'main': "ViewPort", "setttings":"SettingsMenu", "toolbar":"ToolBar"}
-        settings = self.load_settings(extension_name)
+        _config = self.get_config(extension_name)
+        try:
+            if _config['initialized'] != True:
+                self.log.debug(self.translate("logs", "Extension manager attempted to load a user interface from uninitalized extension {0}. Uninitialized extensions cannot be loaded. Try installing/initalizing the extension first.".format(extension_name)))
+                raise AttributeError(self.translate("logs", "Attempted to load a user interface from an uninitialized extension."))
+        except KeyError:
+            self.log.debug(self.translate("logs", "Extension manager attempted to load a user interface from uninitalized extension {0}. Uninitialized extensions cannot be loaded. Try installing/initalizing the extension first.".format(extension_name)))
+            raise AttributeError(self.translate("logs", "Attempted to load a user interface from an uninitialized extension."))
         if subsection:
             extension_name = extension_name+"."+settings[subsection]
             subsection = user_interface_types[subsection]
         extension = self.import_extension(extension_name, subsection)
         return extension
 
+    def get_config(self, name):
+        """Returns a config from an installed extension.
+                
+        Args:
+          name (string): An extension name.
+        
+        Returns:
+          A config (dictionary) for an extension.
+        
+        Raises:
+          KeyError: If an installed extension of the specified name does not exist.
+        """
+        config  = {}
+        _settings = self.user_settings
+        extensions  = _settings.childKeys()
+        if name not in extensions:
+            raise KeyError(self.translate("logs", "No installed extension with the name {0} exists.".format(name)))
+        _settings.beginGroup(name)
+        extension_config = _settings.childKeys()
+        for key in extension_config:
+            config[key] = _settings.value(key)
+        _settings.endGroup()
+        return config
+
+        
     @staticmethod
     def import_extension(extension_name, subsection=None):
         """
@@ -425,8 +445,6 @@ class ExtensionManager(object):
 
         @return dict A dictionary containing an extensions properties.
         """
-#        WRITE_TESTS_FOR_ME()
-#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
         extension_config = {"name":extension_name}
         extension_type = self.extensions[extension_name]
         
@@ -453,6 +471,7 @@ class ExtensionManager(object):
         if not extension_config['tests']:
             if "tests.py" in extension_files:
                 extension_config['tests'] = "tests"
+        extension_config["initialized"] = _settings.value("initialized", True)
         _settings.endGroup()
         return extension_config
 
@@ -698,7 +717,7 @@ class ExtensionManager(object):
 
     def add_config(self, extension_dir, name):
         """Copies a config file to the "loaded" core extension config data folder.
-                       
+
         Args:
           extension_dir (string): The absolute path to the extension directory
           name (string): The name of the config file
@@ -813,8 +832,16 @@ class InvalidSignature(Exception):
 
 
 class ConfigManager(object):
+    """A object for loading config data from a library.
+
+    This object should only be used to load configs and saving/checking those values against the users settings. Any value checking should take place in the users settings.
+    """
 
     def __init__(self, path=None):
+        """
+        Args:
+          path (string): The path to an extension library.
+        """
         #set function logger
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
