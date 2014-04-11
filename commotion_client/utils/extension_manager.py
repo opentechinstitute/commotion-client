@@ -82,6 +82,16 @@ class ExtensionManager(object):
         else:
             raise TypeError(self.translate("logs", "User settings has a global scope and will not be loaded. Because, security."))
 
+    def reset_settings_group(self):
+        """Resets the user_settings group to be at the top of the extensions group.
+
+        Some functions modify the user_settings location to point at indiviudal extensions or other sub-groups. This function resets the settings to point at the top of the extensions group.
+
+        NOTE: This should not be seen as a way to avoid doing clean up on functions you initiate. It is merely a way to ensure that on critical functions (deletions or modifications of existing settings) that errors do not cause data loss for users..
+        """
+        while self.user_settings.group():
+            self.user_settings.endGroup()
+        self.user_settings.beginGroup("extensions")
     
     def init_extension_libraries(self):
         """This function bootstraps the Commotion client when the settings are not populated on first boot or due to error. It iterates through all extensions in the core client and loads them."""
@@ -430,17 +440,28 @@ class ExtensionManager(object):
 
     def remove_extension_settings(self, name):
         """Removes an extension and its core properties from the applications extension settings.
+        
+        long description
+        
+        Args:
+          name (str): the name of an extension to remove from the extension settings.
 
-        @param name str the name of an extension to remove from the extension settings.
+        Returns:
+          bool: True if extension is removed, false if it is not.
+        
+        Raises:
+          ValueError: When an empty string is passed as an argument.
         """
-#        WRITE_TESTS_FOR_ME()
-#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
+        #make sure that a string of "" is not passed to this function because that would remove all keys.
+        self.reset_settings_group()
         if len(str(name)) > 0:
             _settings = self.user_settings
             _settings.remove(str(name))
+            return True
         else:
-            _error = self.translate("logs", "You must specify an extension name greater than 1 char.")
-            raise ValueError(_error)
+            self.log.debug(self.translate("logs", "A zero length string was passed as the name of an extension to be removed. This would delete all the extensions if it was allowed to succeed."))
+            raise ValueError(self.translate("logs", "You must specify an extension name greater than 1 char."))
+        return False
 
     def save_settings(self, extension_config, extension_type="global"):
         """Saves an extensions core properties into the applications extension settings.
@@ -452,107 +473,114 @@ class ExtensionManager(object):
           extension_type (string): Type of extension "user" or "global". Defaults to global.
         
         Returns:
-          bool: True if successful, False on failures
-        
-        Raises:
-        exception: Description.
-        
+          bool: True if successful, False on any failures
         """
         _settings = self.user_settings
         #get extension dir
         try:
             extension_dir = self.libraries[extension_type]
         except KeyError:
-            self.log.warn(self.translate("logs", "Invalid extension type. Please check the extension type and try again."))
+            self.log.warning(self.translate("logs", "Invalid extension type. Please check the extension type and try again."))
             return False
         #create validator
-        config_validator = validate.ClientConfig(extension_config, extension_dir)
+        try:
+            config_validator = validate.ClientConfig(extension_config, extension_dir)
+        except KeyError as _excp:
+            self.log.warning(self.translate("logs", "The extension is missing a name value which is required."))
+            self.log.debug(_excp)
+            return False
+        except FileNotFoundError as _excp:
+            self.log.warning(self.translate("logs", "The extension was not found on the system and therefore cannot be saved."))
+            self.log.debug(_excp)
+            return False
         #Extension Name
-        if config_validator.name():
-            try:
-                extension_name = extension_config['name']
+        try:
+            extension_name = extension_config['name']
+            if config_validator.name():
                 _settings.beginGroup(extension_name)
-            except KeyError:
-                _error = self.translate("logs", "The extension is missing a name value which is required.")
+                _settings.setValue("name", extension_name)
+            else:
+                _error = self.translate("logs", "The extension's name is invalid and cannot be saved.")
                 self.log.error(_error)
                 return False
-        else:
-            _error = self.translate("logs", "The extension's name is invalid and cannot be saved.")
+        except KeyError:
+            _error = self.translate("logs", "The extension is missing a name value which is required.")
             self.log.error(_error)
             return False
         #Extension Main
-        if config_validator.gui("main"):
-            try:
-                _main = extension_config['main']
-            except KeyError:
-                if not config_validator.main():
-                    _main = "main" #Set this for later default values
-                    _settings.setValue("main", _main)
-            else:
-                _settings.setValue("main", _main)
-        else:
-            _error = self.translate("logs", "The config's main value is invalid and cannot be saved.")
-            self.log.error(_error)
-            return False
-        #Extension Settings & Toolbar
-        for val in ["settings", "toolbar"]:
-            if config_validator.gui(val):
-                try:
-                    _config_value = extension_config[val]
-                except KeyError:
-                    #Defaults to main, which was checked and set before
-                    _settings.setValue(val, _main)
-                else:
-                    _settings.setValue(val, _config_value)
-            else:
-                _error = self.translate("logs", "The config's {0} value is invalid and cannot be saved.".format(val))
+        try:
+            _main = extension_config['main']
+            if not config_validator.gui(_main):
+                _error = self.translate("logs", "The config's main value is invalid and cannot be saved.")
                 self.log.error(_error)
                 return False
+        except KeyError:
+            _main = "main" #Set this for later default values
+            if not config_validator.gui(_main):
+                _settings.setValue("main", _main)
+        else:
+            _settings.setValue("main", _main)
+        #Extension Settings & Toolbar
+        for val in ["settings", "toolbar"]:
+            try:
+                _config_value = extension_config[val]
+                if not config_validator.gui(val):
+                    _error = self.translate("logs", "The config's {0} value is invalid and cannot be saved.".format(val))
+                    self.log.error(_error)
+                    return False
+            except KeyError:
+                #Defaults to main, which was checked and set before
+                _settings.setValue(val, _main)
+            else:
+                _settings.setValue(val, _config_value)
         #Extension Parent
-        if config_validator.parent():
-            try:
-                _settings.setValue("parent", extension_config["parent"])
-            except KeyError:
-                self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "parent")))
-                _settings.setValue("parent", "Extensions")
-        else:
-            _error = self.translate("logs", "The config's parent value is invalid and cannot be saved.")
-            self.log.error(_error)
-            return False
-
+        try:
+            _parent = extension_config["parent"]
+            if config_validator.parent():
+                _settings.setValue("parent", _parent)
+            else:
+                _error = self.translate("logs", "The config's parent value is invalid and cannot be saved.")
+                self.log.error(_error)
+                return False
+        except KeyError:
+            self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "parent")))
+            _settings.setValue("parent", "Extensions")
         #Extension Menu Item
-        if config_validator.menu_item():
-            try:
-                _settings.setValue("menu_item", extension_config["menu_item"])
-            except KeyError:
-                self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "menu_item")))
-                _settings.setValue("menu_item", extension_name)
-        else:
-            _error = self.translate("logs", "The config's menu_item value is invalid and cannot be saved.")
-            self.log.error(_error)
-            return False
+        try:
+            _menu_item = extension_config["menu_item"]
+            if config_validator.menu_item():
+                _settings.setValue("menu_item", _menu_item)
+            else:
+                _error = self.translate("logs", "The config's menu_item value is invalid and cannot be saved.")
+                self.log.error(_error)
+                return False
+        except KeyError:
+            self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "menu_item")))
+            _settings.setValue("menu_item", extension_name)
         #Extension Menu Level
-        if config_validator.menu_level():
-            try:
-                _settings.setValue("menu_level", extension_config["menu_level"])
-            except KeyError:
-                self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "menu_level")))
-                _settings.setValue("menu_level", 10)
-        else:
-            _error = self.translate("logs", "The config's menu_level value is invalid and cannot be saved.")
-            self.log.error(_error)
-            return False
+        try:
+            _menu_level = extension_config["menu_level"]
+            if config_validator.menu_level():
+                _settings.setValue("menu_level", _menu_level)
+            else:
+                _error = self.translate("logs", "The config's menu_level value is invalid and cannot be saved.")
+                self.log.error(_error)
+                return False
+        except KeyError:
+            self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "menu_level")))
+            _settings.setValue("menu_level", 10)
         #Extension Tests
-        if config_validator.tests():
-            try:
-                _settings.setValue("tests", extension_config['tests'])
-            except KeyError:
-                self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "tests")))
-                _settings.setValue("tests", "tests")
-        else:
-            _error = self.translate("logs", "Extension {0} does not contain the {1} file listed in the config for its tests. Please either remove the listing to allow for the default value, or add the appropriate file.".format(extension_config['name'], _config_value))
-            self.log.error(_error)
-            return False
+        try:
+            _tests = extension_config['tests']
+            if config_validator.tests():
+                _settings.setValue("tests", _tests)
+            else:
+                _error = self.translate("logs", "Extension {0} does not contain the {1} file listed in the config for its tests. Please either remove the listing to allow for the default value, or add the appropriate file.".format(extension_name, _config_value))
+                self.log.error(_error)
+                return False
+        except KeyError:
+            self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "tests")))
+            _settings.setValue("tests", "tests")
         #Write extension type
         _settings.setValue("type", extension_type)
         _settings.setValue("initialized", True)

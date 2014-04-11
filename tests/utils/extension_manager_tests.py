@@ -1,3 +1,56 @@
+"""
+
+This program is a part of The Commotion Client
+
+Copyright (C) 2014  Seamus Tuohy s2e@opentechinstitute.org
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+
+
+"""
+Unit Tests for commotion_client/utils/extension_manager.py
+
+
+=== Mock Extension ===
+This set of tests uses a mock extension with the following properties.
+
+location: tests/mock/extensions/unit_test_mock
+
+---files in extension archive:---
+  * main.py
+  * units.py
+  * test_bar.py
+  * __init__.py
+  * test.conf
+  * ui/Ui_test.py
+  * ui/test.ui
+
+---Config Values---
+"name":"mock_test_extension",
+"menu_item":"A Mock Testing Object",
+"parent":"Testing",
+"main":"main",
+"settings":"main",
+"toolbar":"test_bar",
+"tests":"units"
+
+
+"""
+
+
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
@@ -5,6 +58,8 @@ from PyQt4 import QtGui
 import unittest
 import re
 import os
+import sys
+import copy
 
 from commotion_client.utils import extension_manager
 
@@ -139,19 +194,18 @@ class ExtensionLibraries(ExtensionSettingsTestCase):
         self.ext_mgr.init_extension_config("global")
         #run function
         user_installed = self.ext_mgr.install_loaded()
-        self.assertEqual(user_installed, ["config_editor"])
+        self.assertEqual(user_installed, ["unit_test_mock"])
 
         #Test that the mock extension was loaded
-        self.assertTrue(self.ext_mgr.check_installed("config_editor"))
+        self.assertTrue(self.ext_mgr.check_installed("unit_test_mock"))
         #Test that ONLY the mock extension was loaded and in the user section
         one_item_only = self.ext_mgr.get_installed()
         self.assertEqual(len(one_item_only), 1)
-        self.assertIn("config_editor", one_item_only)
-        self.assertEqual(one_item_only['config_editor'], 'user')
+        self.assertIn("unit_test_mock", one_item_only)
+        self.assertEqual(one_item_only['unit_test_mock'], 'user')
         #Test that the config_manager was "initialized".
         initialized = self.ext_mgr.get_extension_from_property("initialized", True)
-        self.assertIn("config_editor", initialized)
-        #test not initialize an existing, intialized, extension
+        self.assertIn("unit_test_mock", initialized)
 
     def test_get_extension_from_property(self):
         #setup directory with extension
@@ -159,39 +213,183 @@ class ExtensionLibraries(ExtensionSettingsTestCase):
         #setup config
         self.ext_mgr.init_extension_config("user")
         #Install loaded configs
-        self.ext_mgr.install_loaded()
+        self.ext_mgr.install_loaded("user")
         
-        has_value = self.ext_mgr.get_extension_from_property("menu_item", "Commotion Config File Editor")
-        self.assertIn("config_editor", has_value)
+        has_value = self.ext_mgr.get_extension_from_property("menu_item", "A Mock Testing Object")
+        self.assertIn("unit_test_mock", has_value)
         #key MUST be one of the approved keys
         with self.assertRaises(KeyError):
             self.ext_mgr.get_extension_from_property('pineapple', "made_of_fire")
         does_not_have = self.ext_mgr.get_extension_from_property("menu_item", "I am not called this")
-        self.assertNotIn("config_editor", does_not_have)
-        
-
+        self.assertNotIn("unit_test_mock", does_not_have)
 
         
     def test_get_property(self):
-        self.fail("This test for function get_property (line 302) needs to be implemented")
-        
-    def test_get_type(self):
-        self.fail("This test for function get_type (line 333) needs to be implemented... but this function may actually need to be removed too.")
+        #setup directory with extension
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        #setup config
+        self.ext_mgr.init_extension_config("user")
+        #Install loaded configs
+        self.ext_mgr.install_loaded("user")
+        #test that values which do exist are correct
+        menu_item = self.ext_mgr.get_property("unit_test_mock", "menu_item")
+        self.assertEqual(menu_item, "A Mock Testing Object")
+        #test that invalid keys are correct
+        with self.assertRaises(KeyError):
+            self.ext_mgr.get_property("unit_test_mock", "bunnies_per_second")
+        #test that valid keys, which don't exist in this extension settings are correct
+        #add a false value to the values checked against.
+        self.ext_mgr.config_keys.append('pineapple')
+        with self.assertRaises(KeyError):
+            self.ext_mgr.get_property("unit_test_mock", "pineapple")
         
     def test_load_user_interface(self):
-        self.fail("This test for function load_user_interface (line 359) needs to be implemented")
+        #Add required extension resources file from mock to path since we are not running it in the bundled state.
+        sys.path.append("tests/mock/assets")
+        #setup directory with extension
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        #setup config
+        self.ext_mgr.init_extension_config("user")
+        #Install loaded configs
+        self.ext_mgr.install_loaded("user")
+        #test main viewport
+        main = self.ext_mgr.load_user_interface("unit_test_mock", "main")
+        self.assertTrue(main.is_loaded())
+        #test pulling object from "main" file
+        settings = self.ext_mgr.load_user_interface("unit_test_mock", "settings")
+        self.assertTrue(settings.is_loaded())
+        #test pulling object from another file
+        toolbar = self.ext_mgr.load_user_interface("unit_test_mock", "toolbar")
+        self.assertTrue(settings.is_loaded())
+        #test invalid user interface type
+        with self.assertRaises(AttributeError):
+            self.ext_mgr.load_user_interface("unit_test_mock", "pineapple")
+        #reject uninitialized extensions
+        self.ext_mgr.user_settings.setValue("unit_test_mock/initialized", False)
+        with self.assertRaises(AttributeError):
+            self.ext_mgr.load_user_interface("unit_test_mock", "toolbar")
 
-    def test_import_extension(self):
-        self.fail("This test for function import_extension (line 376) needs to be implemented")
+    def test_get_config(self):
+        #setup directory with extension
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        #setup config
+        self.ext_mgr.init_extension_config("user")
+        #Install loaded configs
+        self.ext_mgr.install_loaded("user")
+        #test that a full config is returned from a extension
+        config = self.ext_mgr.get_config("unit_test_mock")
+        correct_vals = {"menu_item":"A Mock Testing Object",
+                        "parent":"Testing",
+                        "main":"main",
+                        'name': 'unit_test_mock',
+                        "settings":"main",
+                        "toolbar":"test_bar",
+                        "tests":"units",
+                        "type":"user",
+                        "menu_level":10,
+                        "initialized":True}
+        self.assertDictEqual(config, correct_vals)
+        #test that a key error is raised on un-implemented extensions
+        with self.assertRaises(KeyError):
+            self.ext_mgr.get_config("pineapple")
 
-    def test_load_settings(self):
-        self.fail("This test for function load_settings (line 391) needs to be implemented")
+    def test_reset_settings_group(self):
+        #ensure that default is set to extensions
+        default = self.ext_mgr.user_settings.group()
+        self.assertEqual(default, "extensions")
+        #test it works when already in proper group
+        self.ext_mgr.reset_settings_group()
+        already_there = self.ext_mgr.user_settings.group()
+        self.assertEqual(already_there, "extensions")
+        
+        #create a set of groups nested down a few levels
+        self.ext_mgr.user_settings.setValue("one/two/three/four", True)
+        #move a level and ensure that .group() shows NOT in extensions
+        self.ext_mgr.user_settings.beginGroup("one")
+        one_lev = self.ext_mgr.user_settings.group()
+        self.assertNotEqual(one_lev, "extensions")
+        #Test that it works one group down
+        self.ext_mgr.reset_settings_group()
+        one_lev_up = self.ext_mgr.user_settings.group()
+        self.assertEqual(one_lev_up, "extensions")
+        #Move the rest of the way down.
+        self.ext_mgr.user_settings.beginGroup("one")
+        self.ext_mgr.user_settings.beginGroup("two")
+        self.ext_mgr.user_settings.beginGroup("three")
+        multi_lev = self.ext_mgr.user_settings.group()
+        self.assertNotEqual(multi_lev, "extensions")
+        #test it works multiple levels down.
+        self.ext_mgr.reset_settings_group()
+        multi_lev_up = self.ext_mgr.user_settings.group()
+        self.assertEqual(multi_lev_up, "extensions")
 
     def test_remove_extension_settings(self):
-        self.fail("This test for function remove_extension_settings (line 429) needs to be implemented... or moved to a settings module that will eventually handle all the encrypted stuff... but that actually might be better done outside of this.")
-
+        #setup directory with extension
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        #setup config
+        self.ext_mgr.init_extension_config("user")
+        #Install loaded configs
+        self.ext_mgr.install_loaded("user")
+        #test that a '' string raises an error
+        with self.assertRaises(ValueError):
+            self.ext_mgr.remove_extension_settings("")
+        #remove the "unit_test_mock" extension
+        self.ext_mgr.remove_extension_settings("unit_test_mock")
+        #test that it no longer exists.
+        with self.assertRaises(KeyError):
+            self.ext_mgr.get_config("unit_test_mock")
+        
     def test_save_settings(self):
-        self.fail("This test for function save_settings (line 444) needs to be implemented")
+        #setup directory with extension
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        #setup config
+        self.ext_mgr.init_extension_config("user")
+        #Test config added with proper values
+        config = self.ext_mgr.extensions["user"].find("unit_test_mock")
+        self.ext_mgr.save_settings(config, "user")
+        #Show that the extension group was created
+        name = self.ext_mgr.user_settings.childGroups()
+        self.assertEqual(name[0], "unit_test_mock")
+        #enter group and check values
+        self.ext_mgr.user_settings.beginGroup("unit_test_mock")
+        keys = self.ext_mgr.user_settings.childKeys()
+        for _k in list(config.keys()):
+            self.assertIn(_k, keys)
+            self.assertEqual(config[_k], self.ext_mgr.user_settings.value(_k))
+        #check for type and initialization
+        self.assertIn('type', keys)
+        self.assertIn("initialized", keys)
+        self.ext_mgr.user_settings.endGroup()
+        #Check an invalid extension type
+        self.assertFalse(self.ext_mgr.save_settings(config, "pinapple"))
+        #Check an empty config fails
+        self.assertFalse(self.ext_mgr.save_settings({}, "user"))
+        #check a incorrect name fails (using longer string than all system's support)
+        name_conf = copy.deepcopy(config)
+        name_conf['name'] = "s2e" * 250 
+        self.assertFalse(self.ext_mgr.save_settings(name_conf, "user"))
+        #check that an empty name fails.
+        emp_name_conf = copy.deepcopy(config)
+        emp_name_conf['name'] = ""
+        self.assertFalse(self.ext_mgr.save_settings(emp_name_conf, "user"))
+        settings = {'toolbar':'main',
+                    'main':None,
+                    'settings':'main',
+                    'parent':'Extensions',
+                    'menu_item':'unit_test_mock',
+                    'menu_level':10,
+                    'tests':'tests'}
+        
+        for key in settings.keys():
+            conf = copy.deepcopy(config)
+            #test invalid value
+            conf[key] = "s2e" * 250
+            self.assertFalse(self.ext_mgr.save_settings(conf, "user"))
+            #test empty
+            del(conf[key])
+            self.ext_mgr.save_settings(conf, "user")
+            self.assertEqual(self.ext_mgr.user_settings.value('unit_test_mock/'+key), settings[key])
+
 
     def test_save_extension(self):
         self.fail("This test for function save_extension (line 561) needs to be implemented")
