@@ -4,7 +4,7 @@ The Commotion Wireless desktop/laptop client.
 
 To allow desktop clients to create, connect to, and configure Commotion wireless mesh networks.
 
-This repository is in active development. IT DOES NOT WORK! Please look at the roadmap below to see where the project is currently at.  
+This repository is in active development. **IT DOES NOT WORK!** Please look at the roadmap below to see where the project is currently at.  
 
 ###FUTURE Features:
 
@@ -66,7 +66,7 @@ This repository is in active development. IT DOES NOT WORK! Please look at the r
 	  * unit tests (planned)
     * Welcome Page (planned)
 	* Crash Window
-	  * unit tests  (planned)
+	  * unit tests (planned)
 	* Network Status overview (planned)
  	  * unit tests (planned)
   * Setting menu
