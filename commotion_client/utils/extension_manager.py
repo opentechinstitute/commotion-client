@@ -42,6 +42,7 @@ import re
 import sys
 import zipfile
 import json
+import zipimport
 
 #PyQt imports
 from PyQt4 import QtCore
@@ -61,14 +62,15 @@ class ExtensionManager(object):
         self.libraries = {}
         self.user_settings = self.get_user_settings()
         self.config_keys = ["name",
-                              "main",
-                              "menu_item",
-                              "menu_level",
-                              "parent",
-                              "settings",
-                              "toolbar",
-                              "tests",
-                              "initialized",]
+                            "main",
+                            "menu_item",
+                            "menu_level",
+                            "parent",
+                            "settings",
+                            "toolbar",
+                            "tests",
+                            "initialized",
+                            "type",]
 
     def get_user_settings(self):
         """Get the currently logged in user settings object."""
@@ -297,16 +299,6 @@ class ExtensionManager(object):
                         self.log.warning(self.translate("logs", "Extension {0} could not be saved.".format(_config['name'])))
                     else:
                         saved.append(_config['name'])
-                else:
-                    modified_config = False
-                    _settings.beginGroup(_config['name'])
-                    for key in _config.keys():
-                        if not _settings.value(key):
-                            modified_config = True
-                            _settings.setValue(key, _config[key])
-                    _settings.endGroup()
-                    if modified_config:
-                        saved.append(_config['name'])
         return saved
 
     def get_extension_from_property(self, key, val):
@@ -373,18 +365,21 @@ class ExtensionManager(object):
             _settings.endGroup()
             return setting_value
 
-    def load_user_interface(self, extension_name, subsection=None):
-        """Return the full extension object or one of its primary sub-objects (settings, main, toolbar)
+    def load_user_interface(self, extension_name, gui):
+        """Return the graphical user interface (settings, main, toolbar) from an initialized extension.
 
         Args:
           extension_name (string): The extension to load
-          subsection (string): Name of a objects sub-section. (settings, main, or toolbar)
+          gui (string): Name of a objects sub-section. (settings, main, or toolbar)
 
         Returns:
           The ( <UI Type> class) contained within the <extension_name> module.
+        Raise:
+          AttributeError: If an invalid gui type is requested or an uninitialized extension gui is requested.
         """
-        
-        user_interface_types = {'main': "ViewPort", "setttings":"SettingsMenu", "toolbar":"ToolBar"}
+        if str(gui) not in ["settings", "main", "toolbar"]:
+            self.log.debug(self.translate("logs", "{0} is not a supported user interface type.".format(str(gui))))
+            raise AttributeError(self.translate("logs", "Attempted to get a user interface of an invalid type."))
         _config = self.get_config(extension_name)
         try:
             if _config['initialized'] != True:
@@ -393,11 +388,21 @@ class ExtensionManager(object):
         except KeyError:
             self.log.debug(self.translate("logs", "Extension manager attempted to load a user interface from uninitalized extension {0}. Uninitialized extensions cannot be loaded. Try installing/initalizing the extension first.".format(extension_name)))
             raise AttributeError(self.translate("logs", "Attempted to load a user interface from an uninitialized extension."))
-        if subsection:
-            extension_name = extension_name+"."+settings[subsection]
-            subsection = user_interface_types[subsection]
-        extension = self.import_extension(extension_name, subsection)
-        return extension
+        #Get ui file name and location of the extension from the settings.
+        ui_file = _config[gui]
+        _type = self.get_property(extension_name, "type")
+        extension_path = os.path.join(self.libraries[_type], extension_name)
+        #Get the extension 
+        extension = zipimport.zipimporter(extension_path)
+        #add extension to sys path so imported modules can access other modules in the extension.
+        sys.path.append(extension_path)
+        user_interface = extension.load_module(ui_file)
+        if gui == "toolbar":
+            return user_interface.ToolBar()
+        elif gui == "main":
+            return user_interface.ViewPort()
+        elif gui == "settings":
+            return user_interface.SettingsMenu()
 
     def get_config(self, name):
         """Returns a config from an installed extension.
@@ -413,7 +418,7 @@ class ExtensionManager(object):
         """
         config  = {}
         _settings = self.user_settings
-        extensions  = _settings.childKeys()
+        extensions  = _settings.childGroups()
         if name not in extensions:
             raise KeyError(self.translate("logs", "No installed extension with the name {0} exists.".format(name)))
         _settings.beginGroup(name)
@@ -422,58 +427,6 @@ class ExtensionManager(object):
             config[key] = _settings.value(key)
         _settings.endGroup()
         return config
-
-        
-    @staticmethod
-    def import_extension(extension_name, subsection=None):
-        """
-        Load extensions by string name.
-
-        @param extension_name string The extension to load
-        @param subsection string The module to load from an extension
-        """
-#        WRITE_TESTS_FOR_ME()
-#        FIX_ME_FOR_NEW_EXTENSION_TYPES()
-        if subsection:
-            extension = importlib.import_module("."+subsection, "extensions."+extension_name)
-        else:
-            extension = importlib.import_module("."+extension_name, "extensions")
-        return extension
-
-    def load_settings(self, extension_name):
-        """Gets an extension's settings and returns them as a dict.
-
-        @return dict A dictionary containing an extensions properties.
-        """
-        extension_config = {"name":extension_name}
-        extension_type = self.extensions[extension_name]
-        
-        _settings = self.user_settings
-        _settings.beginGroup(extension_type)
-        extension_config['main'] = _settings.value("main").toString()
-        #get extension dir
-        main_ext_dir = os.path.join(QtCore.QDir.currentPath(), "extensions")
-        main_ext_type_dir = os.path.join(main_ext_dir, extension_type)
-        extension_dir = QtCore.QDir.mkpath(os.path.join(main_ext_type_dir, extension_config['name']))
-        extension_files = extension_dirs.entryList()
-        if not extension_config['main']:
-            if "main.py" in extension_files:
-                extension_config['main'] = "main"
-            else:
-                _error = self.translate("logs", "Extension {0} does not contain a \"main\" extension file. Please re-load or remove this extension.".format(extension_name))
-                raise IOError(_error)
-        extension_config['settings'] = _settings.value("settings", extension_config['main']).toString()
-        extension_config['toolbar'] = _settings.value("toolbar", extension_config['main']).toString()
-        extension_config['parent'] = _settings.value("parent", "Add-On's").toString()
-        extension_config['menu_item'] = _settings.value("menu_item", extension_config['name']).toString()
-        extension_config['menu_level'] = _settings.value("menu_level", 10).toInt()
-        extension_config['tests'] = _settings.value("tests").toString()
-        if not extension_config['tests']:
-            if "tests.py" in extension_files:
-                extension_config['tests'] = "tests"
-        extension_config["initialized"] = _settings.value("initialized", True)
-        _settings.endGroup()
-        return extension_config
 
     def remove_extension_settings(self, name):
         """Removes an extension and its core properties from the applications extension settings.
@@ -532,11 +485,11 @@ class ExtensionManager(object):
             try:
                 _main = extension_config['main']
             except KeyError:
-                if config_validator.main():
+                if not config_validator.main():
                     _main = "main" #Set this for later default values
-                    _settings.setValue("main", "main")
-                else:
                     _settings.setValue("main", _main)
+            else:
+                _settings.setValue("main", _main)
         else:
             _error = self.translate("logs", "The config's main value is invalid and cannot be saved.")
             self.log.error(_error)
@@ -592,7 +545,7 @@ class ExtensionManager(object):
         #Extension Tests
         if config_validator.tests():
             try:
-                _settings.setValue("main", extension_config['tests'])
+                _settings.setValue("tests", extension_config['tests'])
             except KeyError:
                 self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(extension_name, "tests")))
                 _settings.setValue("tests", "tests")
