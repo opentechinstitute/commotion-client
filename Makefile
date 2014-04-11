@@ -1,14 +1,13 @@
 .PHONY: build windows osx debian clean install tests
 
-all: build windows debian osx
+all: build
 
-extensions: build_tree
+build: clean assets
+	python3.3 build/scripts/build.py build
 	python3.3 build/scripts/zip_extensions.py
 
-build: clean extensions assets 
-	python3.3 build/scripts/build.py build
-
-assets: build_tree
+assets:
+	mkdir build/resources || true
 	pyrcc4 -py3 commotion_client/assets/commotion_assets.qrc -o build/resources/commotion_assets_rc.py
 
 windows:
@@ -23,17 +22,16 @@ linux: build
 debian:
 	@echo "debian packaging is not yet implemented"
 
-build_tree:
-	mkdir build/resources || true
-
 test: tests
 	@echo "test build complete"
 
-tests: clean build
+tests: build
 	mkdir tests/temp || true
+	mkdir tests/mock/assets || true
+	cp build/resources/commotion_assets_rc.py tests/mock/assets/. || true
 	python3.3 tests/run_tests.py
 
-clean: 
+clean:
 	python3.3 build/scripts/build.py clean
 	rm -fr build/resources/* || true
 	rm -fr build/exe.* || true
