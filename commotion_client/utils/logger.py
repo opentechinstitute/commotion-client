@@ -38,7 +38,9 @@ class LogHandler(object):
     
         from commotion-client.utils import logger
         log = logger.getLogger("commotion_client"+__name__)
-    
+
+
+    NOTE: The exceptions in this function do not have translation implemented. This is that they are called before the QT application and, as such, are not pushed through QT's translation tools. This could be a mistake on the developers side, as he is a bit foggy on the specifics of QT translation. You can access the feature request at https://github.com/opentechinstitute/commotion-client/issues/24
     """
     
     def __init__(self, name, verbosity=None, logfile=None):
@@ -74,7 +76,7 @@ class LogHandler(object):
             #if it does not exist try and create it
             if not log_dir.exists():
                 if not log_dir.mkpath(log_dir.absolutePath()):
-                    raise NotADirectoryError(self.translate("logs", "Attempted to set logging to the user's Commotion directory. The directory '<home>/.Commotion' does not exist and could not be created."))
+                    raise NotADirectoryError("Attempted to set logging to the user's Commotion directory. The directory '<home>/.Commotion' does not exist and could not be created.")
             self.logfile = log_dir.filePath("commotion.log")
         elif platform in ['win32', 'cygwin']:
             #Try ../AppData/Local/Commotion first
@@ -82,7 +84,7 @@ class LogHandler(object):
             #if it does not exist try and create it
             if not log_dir.exists():
                 if not log_dir.mkpath(log_dir.absolutePath()):
-                    raise NotADirectoryError(self.translate("logs", "Attempted to set logging to the user's Commotion directory. The directory '<home>/.Commotion' does not exist and could not be created."))
+                    raise NotADirectoryError("Attempted to set logging to the user's Commotion directory. The directory '<home>/.Commotion' does not exist and could not be created.")
             self.logfile = log_dir.filePath("commotion.log")
         elif platform == 'linux':
             #Try /var/logs/
@@ -94,8 +96,8 @@ class LogHandler(object):
                     #If fail then just write logs in home directory
                     #TODO check if this is appropriate... its not.
                     home = QtCore.QDir.home()
-                    if not home.mkdir(".Commotion"):
-                        raise NotADirectoryError(self.translate("logs", "Attempted to set logging to the user's Commotion directory. The directory '<home>/.Commotion' does not exist and could not be created."))
+                    if not home.exists(".Commotion") and not home.mkdir(".Commotion"):
+                        raise NotADirectoryError("Attempted to set logging to the user's Commotion directory. The directory '{0}/.Commotion' does not exist and could not be created.".format(home.absolutePath()))
                     else:
                         home.cd(".Commotion")
                         self.logfile = home.filePath("commotion.log")
@@ -103,7 +105,7 @@ class LogHandler(object):
                 self.logfile = log_dir.filePath("commotion.log")
         else:
             #I'm out!
-            raise OSError(self.translate("logs", "Could not create a logfile."))
+            raise OSError("Could not create a logfile.")
 
     def set_verbosity(self, verbosity=None, log_type=None):
         """Set's the verbosity of the logging for the application.
