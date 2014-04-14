@@ -60,6 +60,8 @@ import re
 import os
 import sys
 import copy
+import types
+
 
 from commotion_client.utils import extension_manager
 
@@ -114,9 +116,10 @@ class LoadConfigSettings(ExtensionSettingsTestCase):
 
         #Check for an empty directory.
         self.ext_mgr.libraries['user'] = os.path.abspath("tests/temp/")
-        self.ext_mgr.init_extension_config('user')
-        self.assertFalse(self.ext_mgr.extensions['user'].has_configs())
-        self.ext_mgr.extensions['user'] = None
+        with self.assertRaises(ValueError):
+            self.ext_mgr.init_extension_config('user')
+        with self.assertRaises(KeyError):
+            self.ext_mgr.extensions['user'].has_configs()
 
         #populate with populated directory
         self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
@@ -191,7 +194,8 @@ class ExtensionLibraries(ExtensionSettingsTestCase):
         #setup paths and configs
         self.ext_mgr.init_libraries()
         self.ext_mgr.init_extension_config("user")
-        self.ext_mgr.init_extension_config("global")
+        with self.assertRaises(ValueError):
+            self.ext_mgr.init_extension_config("global")
         #run function
         user_installed = self.ext_mgr.install_loaded()
         self.assertEqual(user_installed, ["unit_test_mock"])
@@ -390,41 +394,160 @@ class ExtensionLibraries(ExtensionSettingsTestCase):
             self.ext_mgr.save_settings(conf, "user")
             self.assertEqual(self.ext_mgr.user_settings.value('unit_test_mock/'+key), settings[key])
 
-
-    def test_save_extension(self):
-        self.fail("This test for function save_extension (line 561) needs to be implemented")
-        
-    def test_add_config(self):
-        self.fail("This test for function add_config (line 670) needs to be implemented... but the function should actually just be removed.")
-        
-    def test_remove_config(self):
-        self.fail("This test for function remove_config (line 699) needs to be implemented... but the function should actually just be removed.")
-
-    def test_unpack_extension(self):
-        self.fail("This test for function unpack_extension (line 723) needs to be implemented... but that function actually MUST be removed since we are not unpacking extension objects")
-        
-    def test_save_unpacked_extension(self):
-        self.fail("This test for function save_unpacked_extension (line 743) needs to be implemented... but that function actually MUST be removed since we are not unpacking extension objects")
-
 class ConfigManagerTests(unittest.TestCase):
 
-    #Create a new setUp and CleanUP set of functions for these configManager tests
+    def setUp(self):
+        self.app = QtGui.QApplication([])
+        self.app.setOrganizationName("test_case");
+        self.app.setApplicationName("testing_app");        
+        
+    def tearDown(self):
+        self.app.deleteLater()
+        del self.app
+        self.app = None
+        #Delete everything under tests/temp
+        for root, dirs, files in os.walk(os.path.abspath("tests/temp/"), topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
 
     def test_init(self):
-        self.fail("This test for the init function (line 788) needs to be implemented")
+        #init config without any paths and ensure that it does not error out and creates the appropriate empty items
+        self.econfig = extension_manager.ConfigManager()
+        self.assertEqual(self.econfig.configs, [])
+        self.assertEqual(self.econfig.paths, [])
+        self.assertEqual(self.econfig.directory, None)
+        
+        #show creation with an empty directory raises the proper error.
+        with self.assertRaises(ValueError):
+            self.full_config = extension_manager.ConfigManager("tests/temp/")
 
+        #init config with a working directory and ensure that everything loads appropriately.
+        self.full_config = extension_manager.ConfigManager("tests/mock/extensions")
+        self.assertEqual(self.full_config.configs, [ {'parent': 'Testing',
+                                                      'name': 'unit_test_mock',
+                                                      'tests': 'units',
+                                                      'settings': 'main',
+                                                      'toolbar': 'test_bar',
+                                                      'menu_item': 'A Mock Testing Object',
+                                                      'main': 'main'} ])
+        self.assertEqual(self.full_config.paths, [os.path.abspath("tests/mock/extensions/unit_test_mock")])
+        self.assertEqual(self.full_config.directory, "tests/mock/extensions")
+        
     def test_has_configs(self):
-        self.fail("This test for function has_configs (line 806) needs to be implemented")
+        #test without configs
+        self.empty_config = extension_manager.ConfigManager()
+        self.assertFalse(self.empty_config.has_configs())
+        #test with configs
+        self.full_config = extension_manager.ConfigManager("tests/mock/extensions")
+        self.assertTrue(self.full_config.has_configs())
 
     def test_find(self):
-        self.fail("This test for function find (line 817) needs to be implemented")
+        #test without configs
+        self.empty_config = extension_manager.ConfigManager()
+        #test returns False when configs are empty
+        self.assertFalse(self.empty_config.find())
+        #ttest returns False on bad value with no configs
+        self.assertFalse(self.empty_config.find(), "NONE")
+        #test with configs
+        self.full_config = extension_manager.ConfigManager("tests/mock/extensions")
+        #test returns config list on empty args and empty configs
+        self.assertEqual(self.full_config.find(), [{'parent': 'Testing',
+                                                 'name': 'unit_test_mock',
+                                                 'tests': 'units',
+                                                 'settings': 'main',
+                                                 'toolbar': 'test_bar',
+                                                 'menu_item': 'A Mock Testing Object',
+                                                 'main': 'main'} ])
+        #ttest returns False on bad value with no configs
+        self.assertFalse(self.full_config.find("NONE"))
+        #test returns corrent config when specified
+        dict_list = self.full_config.find("unit_test_mock")
+        self.assertDictEqual(dict_list, {'parent': 'Testing',
+                                            'name': 'unit_test_mock',
+                                            'tests': 'units',
+                                            'settings': 'main',
+                                            'toolbar': 'test_bar',
+                                            'menu_item': 'A Mock Testing Object',
+                                            'main': 'main'} )
 
     def test_get_path(self):
-        self.fail("This test for function get_paths (line 838) needs to be implemented")
+        self.empty_config = extension_manager.ConfigManager()
+        #an empty path should raise an error
+        with self.assertRaises(TypeError):
+            self.empty_config.get_paths("tests/temp/")
+        #correct path should return the extensions absolute paths.
+        paths = self.empty_config.get_paths("tests/mock/extensions")
+        self.assertEqual(paths, [os.path.abspath("tests/mock/extensions/unit_test_mock")])
         
     def test_get(self):
-        self.fail("This test for function get (line 881) needs to be implemented")
-        
-    def test_load(self):
-        self.fail("This test for function load (line 899) needs to be implemented")
+        self.empty_config = extension_manager.ConfigManager()
+        #a config that does not exist should return an empty list
+        self.assertEqual(list(self.empty_config.get(["tests/temp/i_dont_exist"])), [])
+        #correct path should return a generator with the extensions config file
+        config_path = os.path.abspath("tests/mock/extensions/unit_test_mock")
+        self.assertEqual(list(self.empty_config.get(["tests/mock/extensions/unit_test_mock"])),
+                             [{'parent': 'Testing',
+                              'name': 'unit_test_mock',
+                              'tests': 'units',
+                              'settings': 'main',
+                              'toolbar': 'test_bar',
+                              'menu_item': 'A Mock Testing Object',
+                               'main': 'main'}])
+        self.assertIs(type(self.empty_config.get(["tests/mock/extensions/unit_test_mock"])), types.GeneratorType)
 
+    def test_load(self):
+        self.empty_config = extension_manager.ConfigManager()
+        #a config that does not exist should return false
+        self.assertFalse(self.empty_config.load("tests/temp/i_dont_exist"))
+        #a object that is not a zipfile should return false as well        
+        self.assertFalse(self.empty_config.load("tests/mock/assets/commotion_assets_rc.py"))
+        #correct path should return the extensions config file
+        config_path = os.path.abspath("tests/mock/extensions/unit_test_mock")
+        self.assertEqual(self.empty_config.load("tests/mock/extensions/unit_test_mock"),
+                         {'parent': 'Testing',
+                          'name': 'unit_test_mock',
+                          'tests': 'units',
+                          'settings': 'main',
+                          'toolbar': 'test_bar',
+                          'menu_item': 'A Mock Testing Object',
+                          'main': 'main'})
+        
+        self.fail("A broken extension with an invalid config needs to be added to make this set complete. Test commented out below.")
+        #        with self.assertRaises(ValueError):
+        #            self.empty_config.load("tests/mock/broken_extensions/non_json_config")
+        self.fail("A broken extension with a config file without the .conf name needs to be added. Test commented out below.")
+        #self.assertFalse(self.empty_config.load("tests/mock/broken_extensions/no_conf_prefix_config"))
+
+
+
+def test_init_extension_config(self):
+    """Test that init extension config properly handles the various use cases."""
+    #ext_type MUST be core|global|user
+    with self.assertRaises(ValueError):
+        self.ext_mgr.init_extension_config('pineapple')
+        
+        #Check for an empty directory.
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/temp/")
+        self.ext_mgr.init_extension_config('user')
+        self.assertFalse(self.ext_mgr.extensions['user'].has_configs())
+        self.ext_mgr.extensions['user'] = None
+
+        #populate with populated directory
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.init_extension_config('user')
+        self.assertTrue(self.ext_mgr.extensions['user'].has_configs())
+        self.ext_mgr.extensions['user'] = None
+        
+        #check all types on default call
+        self.ext_mgr.libraries['user'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.libraries['global'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.libraries['core'] = os.path.abspath("tests/mock/extensions/")
+        self.ext_mgr.init_extension_config()
+        self.assertTrue(self.ext_mgr.extensions['user'].has_configs())
+        self.assertTrue(self.ext_mgr.extensions['global'].has_configs())
+        self.assertTrue(self.ext_mgr.extensions['core'].has_configs())
+        self.ext_mgr.extensions['user'] = None
+        self.ext_mgr.extensions['global'] = None
+        self.ext_mgr.extensions['core'] = None        
