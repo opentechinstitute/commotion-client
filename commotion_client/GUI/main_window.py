@@ -23,7 +23,6 @@ from commotion_client.assets import commotion_assets_rc
 from commotion_client.GUI.menu_bar import MenuBar
 from commotion_client.GUI.crash_report import CrashReport
 from commotion_client.GUI import welcome_page
-from commotion_client.utils import config
 from commotion_client.utils import extension_manager
 
 class MainWindow(QtGui.QMainWindow):

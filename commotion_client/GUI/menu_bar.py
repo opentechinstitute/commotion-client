@@ -21,7 +21,6 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 #Commotion Client Imports
-from commotion_client.utils import config
 from commotion_client.utils.extension_manager import ExtensionManager
 
 class MenuBar(QtGui.QWidget):
@@ -72,9 +71,11 @@ class MenuBar(QtGui.QWidget):
             self.clear_layout(self.layout)
         menu_items = {}
         ext_mgr = ExtensionManager()
-        extensions = ext_mgr.get_installed().keys()
+        #extensions = ext_mgr.get_installed().keys()
+        extensions = None
+        ext_mgr.load_core()
         if not extensions:
-            ext_mgr.load_all()
+            ext_mgr.load_core()
             extensions = ext_mgr.get_installed().keys()
 
         if extensions:
