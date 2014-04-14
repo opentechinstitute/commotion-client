@@ -662,18 +662,17 @@ class ConfigManager(object):
           directory (string): The path to the folder that extension's are within. Extensions can be up to one level below the directory given.
         
         Returns:
-          config_files (array): An array of paths to all extension objects withj config files that were found.
+          config_files (array): An array of paths to all extension objects with config files that were found.
         
         Raises:
           TypeError: If no extensions exist within the directory requested.
           AssertionError: If the directory path does not exist.
         
         """
-        #Check the directory and 
+        #Check the directory and raise value error if not there
         dir_obj = QtCore.QDir(str(directory))
         if not dir_obj.exists(dir_obj.absolutePath()):
-            self.log.warning(self.translate("logs", "Folder at path {0} does not exist. No Config files loaded.".format(str(directory))))
-            return False
+            raise ValueError(self.translate("logs", "Folder at path {0} does not exist. No Config files loaded.".format(str(directory))))
         else:
             path = dir_obj.absolutePath()
 
@@ -707,7 +706,9 @@ class ConfigManager(object):
         """
         #load config file
         if not paths:
+            self.log.debug(self.translate("logs", "No paths found. Attempting to load all extension manager paths list."))
             paths = self.paths
+            self.log.debug(self.translate("logs", "Found paths:{0}.".format(paths)))
         for path in paths:
             if fs_utils.is_file(path):
                 config = self.load(path)
