@@ -130,7 +130,7 @@ class ExtensionManager(object):
         """
         #==== Core ====#
         _app_path = QtCore.QDir(QtCore.QCoreApplication.applicationDirPath())
-        _app_path.setPath("extensions")
+        _app_path.cd("extensions")
         #set the core extension directory
         self.libraries['core'] = _app_path.absolutePath()
         self.log.debug(self.translate("logs", "Core extension directory succesfully set."))
@@ -160,7 +160,7 @@ class ExtensionManager(object):
             ext_dir = platform_dirs[platform][path_type+'_root']
             ext_path = platform_dirs[platform][path_type]
             #move the root directory to the correct sub-path.
-            ext_dir.setPath(ext_path)
+            ext_dir.cd(ext_path)
             #Set the extension directory.
             self.libraries[path_type] = ext_dir.absolutePath()
 
