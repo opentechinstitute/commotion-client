@@ -40,6 +40,7 @@ class ClientConfig(object):
                               "parent",
                               "settings",
                               "toolbar",
+                              "tests",
                               "initialized",]
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
