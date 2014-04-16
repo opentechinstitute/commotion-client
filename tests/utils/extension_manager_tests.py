@@ -173,6 +173,8 @@ class ExtensionLibraries(ExtensionSettingsTestCase):
         #init libraries from library defaults
         self.ext_mgr.set_library_defaults()
         user_dir = self.ext_mgr.libraries['user']
+        #Set global path to be a temporary path because it pulls the application path, which is pythons /usr/local/bin path which we don't have permissions for.
+        self.ext_mgr.libraries['global'] = os.path.abspath("tests/temp/")
         global_dir = self.ext_mgr.libraries['global']
         self.ext_mgr.init_libraries()
         self.assertTrue(os.path.isdir(os.path.abspath(user_dir)))
@@ -477,6 +479,9 @@ class ConfigManagerTests(unittest.TestCase):
         #an empty path should raise an error
         with self.assertRaises(TypeError):
             self.empty_config.get_paths("tests/temp/")
+        # a false path should raise an error
+        with self.assertRaises(ValueError):
+            self.empty_config.get_paths("tests/temp/pineapple")
         #correct path should return the extensions absolute paths.
         paths = self.empty_config.get_paths("tests/mock/extensions")
         self.assertEqual(paths, [os.path.abspath("tests/mock/extensions/unit_test_mock")])
