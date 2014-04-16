@@ -2,14 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-main
+test_bar
 
-An initial viewport template to make development easier.
-
-@brief Populates the extensions initial view-port. This can be the same file as the settings and taskbar as long as that file contains seperate functions for each object type.
-
-@note This template ONLY includes the objects for the "main" component of the extension template. The other components can be found in their respective locations.
-
+A unit test extension. Not for production.
 """
 
 #Standard Library Imports
@@ -20,12 +15,11 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 #import python modules created by qtDesigner and converted using pyuic4
-#from extensions.core.config_manager.ui import Ui_config_manager.py
-from ui import Ui_config_manager
+from ui import Ui_test
 
-class ViewPort(Ui_config_manager.ViewPort):
+class ToolBar(Ui_test.ViewPort):
     """
-    pineapple
+    This is a mock extension and should not be used for ANYTHING user facing!
     """
 
     start_report_collection = QtCore.pyqtSignal()
@@ -44,3 +38,6 @@ class ViewPort(Ui_config_manager.ViewPort):
         """HI"""
         self.error_report.emit("THIS IS AN ERROR MESSAGE!!!")
         pass
+
+    def is_loaded(self):
+        return True
