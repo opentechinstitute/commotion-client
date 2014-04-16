@@ -190,7 +190,7 @@ class MainWindow(QtGui.QMainWindow):
         _settings.beginGroup("MainWindow")
 
         #Load settings from saved, or use defaults
-        geometry = _settings.value("geometry", defaults['geometry']).toRect()
+        geometry = _settings.value("geometry", defaults['geometry'])
         if geometry.isNull() == True:
             _error = self.translate("logs", "Could not load window geometry from settings file or defaults.")
             self.log.critical(_error)
