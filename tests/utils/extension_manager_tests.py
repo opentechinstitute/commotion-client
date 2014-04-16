@@ -114,10 +114,9 @@ class LoadConfigSettings(ExtensionSettingsTestCase):
         with self.assertRaises(ValueError):
             self.ext_mgr.init_extension_config('pineapple')
 
-        #Check for an empty directory.
+        #Check that an empty directory does nothing.
         self.ext_mgr.libraries['user'] = os.path.abspath("tests/temp/")
-        with self.assertRaises(ValueError):
-            self.ext_mgr.init_extension_config('user')
+        self.ext_mgr.init_extension_config('user')
         with self.assertRaises(KeyError):
             self.ext_mgr.extensions['user'].has_configs()
 
@@ -196,8 +195,10 @@ class ExtensionLibraries(ExtensionSettingsTestCase):
         #setup paths and configs
         self.ext_mgr.init_libraries()
         self.ext_mgr.init_extension_config("user")
-        with self.assertRaises(ValueError):
-            self.ext_mgr.init_extension_config("global")
+        self.ext_mgr.init_extension_config("global")
+        #Global is empty, so make sure it is not filled.
+        with self.assertRaises(KeyError):
+            self.ext_mgr.extensions['global'].has_configs()
         #run function
         user_installed = self.ext_mgr.install_loaded()
         self.assertEqual(user_installed, ["unit_test_mock"])
