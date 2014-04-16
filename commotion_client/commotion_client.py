@@ -174,7 +174,7 @@ class CommotionClientApplication(single_application.SingleApplicationWithMessagi
         """
         extensions = extension_manager.ExtensionManager()
         if not extensions.check_installed():
-            extensions.load_core()
+            extensions.init_extension_libraries()
         if not self.main:
             try:
                 self.main = self.create_main_window()
