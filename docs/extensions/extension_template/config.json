@@ -1,0 +1,9 @@
+{
+"name":"extension_template",
+"menuItem":"Extension Template",
+"parent":"Templates",
+"settings":"settings",
+"taskbar":"task_bar",
+"main":"main",
+"tests":"test_suite"
+}

@@ -3,9 +3,14 @@
 
 # Copyright (c) 2009 - 2014 Detlev Offenbach <detlev@die-offenbachs.de>
 #
+# Per Eric Project April 1, 2014 Licensed GPLV 3
+# GNU GENERAL PUBLIC LICENSE
+# Version 3, 29 June 2007
 
 """
-Script for Commotion to compile all .ui files to Python source. Taken from the eric5 code base.
+Script for Commotion to compile all .ui files to Python source.
+
+From the eric5 projects code base.
 """
 
 import sys

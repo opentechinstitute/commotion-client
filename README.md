@@ -1,91 +1,103 @@
-##Commotion Linux - Python Implementation
+##Commotion Client (UNSTABLE)
 
-##INTRODUCTION
-This is an initial implementation of core Commotion functionality in the form of a python module (commotionc) and related scripts.  None of the code in this bundle is intended to be called directly, but rather serves as a backend for commotion-mesh-applet and nm-applet-olsrd (although if you really want to you can use fallback.py as a basic command-line interface to bring Commotion up and down). Future versions of this code will allow for full command-line control of the Commotion software stack via one unified binary.  
+The Commotion Wireless desktop/laptop client.
 
-##PRE-REQUISITES
-1. Confirm that you have a wireless adapter whose driver supports both the cfg80211 kernel interface and ibss mode. A list of drivers that support these features can be found at http://wireless.kernel.org/en/users/Drivers. 
-2. Ensure that you are running an up-to-date OS and kernel.  Where possible, download and install the newest kernel your OS supports (optimally 3.5 or higher).  Many wireless drivers are embedded in the kernel, and some of these have only recently gotten full cfg80211 support.  
-3. If you are running an OS that uses a version of wpasupplicant older than v. 1.0, you will either need to recompile wpasupplicant for your platform with support for IBSS\_RSN, or install the commotion-wpasupplicant package.  If you opt to use commotion-wpasupplicant, your system will only be able connect in "fallback" mode, which entirely bypasses network manager.  
+To allow desktop clients to create, connect to, and configure Commotion wireless mesh networks.
 
-##INSTALLATION
-----------
-If you are using Debian, Ubuntu, Mint, or any other Debian-derivative, you can
-install Commotion by downloading all .deb packages located at
-https://downloads.commotionwireless.net/linux, and installing them with:
+This repository is in active development. **IT DOES NOT WORK!** Please look at the roadmap below to see where the project is currently at.  
 
-sudo dpkg -i \*.deb
+###FUTURE Features:
 
-If you encounter any dependency errors during this process, simply run:
+  * A graphical user interface with:
+	* A "setup wizard" for quickly creating/connecting to a Commotion mesh.
+    * Mesh network advances settings configuration tools
+	* Commotion mesh config customizer
+	* Application system with:
+	  * Mesh network application viewer
+	  * Client application advertisement
+	* Multiple user accounts with:
+	  * Seperate "Serval Keychains"
+	  * Custom Network & Application Settings
+  * A status bar icon for selecting, connecting to, and disconnecting from ad-hoc networks
+  * A robust extension system that allows for easy customization and extension of the core platform
+  * Full string translation & internationalization support
+  * Built in accessability support
+  
+###Requirements: ( To run )
 
-apt-get install -f
+  * Python 3 or higher
 
-to resolve the problems, and then run the original dpkg command once again.
+###Requirements: ( To build from source )
 
-##USAGE
-###Step 1
-Define a new mesh network profile or modify the default profile in `/etc/commotion/profiles.d/`. You can define as many different network profiles as you wish, one per file.  .profile files consist of simple parameter=value pairs, one per line.  The default `commotionwireless.net.profile` file installed by the commotion-mesh-applet package shows all available parameters:
+  * Python 3.3 or higher
+  * cx_freeze (See: build/README.md for instructions)
+		
+###Current Roadmap:
 
-```
-ssid=commotionwireless.net 
-#Network name (REQUIRED)
-bssid=02:CA:FF:EE:BA:BE
-#IBSS cell ID, which takes the form of a fake mac address.  If this field is omitted, it will be automatically generated via an md4 hash of the ssid and channel.
-channel=5
-#2.4 GHz Channel (REQUIRED)
-ip=5.0.0.0
-#When ipgenerate=true, ip holds the base address from which the actual ip will be generated.  When ipgenerate=false, ip holds the actual ip that will be used for the connection (REQUIRED)
-ipgenerate=true
-#See note for ip parameter.  ipgenerate is automatically set to false once a permanent ip has been generated (REQUIRED)
-netmask=255.0.0.0
-#The subnet mask of the network (REQUIRED)
-dns=8.8.8.8
-#DNS server (REQUIRED)
-psk=meshpassword
-#The password required to connect to an IBSS-RSN encrypted mesh network.  When connecting to a network with an encrypted backhaul, this parameter is required.  When connecting to a networking without encryption, the parameter should be omitted entirely.  
-```
-
-###Step 2
-Once you have either modified the default profile or installed a new one, you will need to force the various Commotion helper applets to reparse the profiles.d directory, like so:
-* **commotion-mesh-applet:** Restart commotion-mesh-applet either by logging out of your current user session and logging in again, or exiting the applet and then running it directly from the command line: `/usr/bin/gnome-applets/commotion-mesh-applet`.
-* **nm-dispatcher-olsrd:** Have network manager connect or disconnect to a network - but *NOT* the mesh network you're trying to connect to.  This will force the dispatcher script to run, which will pull the updates to the `profiles.d` directory into the appropriate connection files in `/etc/NetworkManager/system-connections/`. You can can confirm that the new Commotion settings have been accepted by looking at the appropriate network profile in the nm-applet interface, and/or the contents of `/etc/NetworkManager/system-connections/<connectionname>`
-
-###Step 3
-Click on the mesh profile you wish to connect to in the list of networks shown by commotion-mesh-applet.  If your system is capable of using the "network manager" connection path, Network Manager will activate the specified connection, and nm-applet will display an ad-hoc icon once you are connected.  If your system relies on the "fallback" connection path, Network Manager will be put to sleep when the mesh network is activated, and will remain so until the mesh connection is deactivated.  In the fallback case, all networking mechanics are handled directly by wpasupplicant and calls to ifconfig.  
-
-###Step 4
-When you wish to restore normal networking functionality, click <Disconnect> in commotion-mesh-applet.  
-
-##TROUBLESHOOTING NOTES
-* Logging for all commotion modules is handled by syslog, with each message prefixed by the module that generated it (ie, `nm-dispatcher-olsrd.log`).  
-* Hence, a useful command to run while trying to connect to a mesh might be: *tail -f `/var/log/syslog` | grep -e commotion -e nm-dispatcher*
-* Some additional function failure information may be dumped to standard out by commotion-mesh-applet, so if you're having trouble connecting you should close the applet and restart it from a command line, so that you can see its output. 
-* If you are using the "network manager" connection path, you might want to launch and keep *wpa_cli* open while you're trying to connect.  This will allow you to see whether or not the Linux client is able to successfully complete the authentication handshake with the rest of the network.  
-* When connecting to encrypted mesh networks, you want to see output that says "Key negotiation completed with <MAC address>" immediately after you connect.  In the fallback case, this output should be dumped to stdout by commotion-mesh-applet.  In the "network manager" connection process, this output should be shown by *wpa_cli*.  
-* Some drivers much more likely to properly connect to a mesh after being unloaded from and then reloaded into the kernel. Weirdly, this also applies to olsrd: If everything else seems to be working, but olsrd refuses to get routes, try unloading/reloading the driver, and reconnecting.
-* iwconfig and iw both lie horribly about data such as active channel and authentication status.  Don't necessarily believe what they tell you.  
-
-##BUGS
-----
-If you encounter any problems or wish to request features, please add them to
-our issue tracker:
-
-https://github.com/opentechinstitute/nm-dispatcher-olsrd
-
-##BUILDING
---------
-If you are on a non-Debian-derivitive GNU/Linux distro, then you'll need to
-install this manually.  We are looking for contributions of packaging to make
-this easy for people to do.
-
-Check the `debian/control` file for a list of standard libraries that are
-required.  Here are the other libraries needed:
-
-* https://github.com/opentechinstitute/commotion-linux-py
-* https://pypi.python.org/pypi/python-networkmanager
-
-This project relies heavily on the NetworkManager 0.9.x dbus API, currently
-via the python-networkmanager library available on pypi:
-
-http://people.redhat.com/dcbw/NetworkManager/NetworkManager%20DBUS%20API.txt
-http://projects.gnome.org/NetworkManager/developers/api/09/spec.html
+  * Core application
+    * Single application support
+    * Cross-application instance messaging
+    * Crash reporting 
+	  * With PGP encryption to the Commotion Team (planned)
+	* unit tests (planned)
+  * Main Window
+    * unit tests (planned)
+  * Menu Bar
+    * Automatically displays all core and user loaded extensions (planned)
+	* Unit Tests (planned)
+  * Task Bar
+    * unit tests (planned)
+  * Extension Manager
+    * unit tests (planned)
+  * Core Extensions
+    * Network vizualizer (planned)
+	  * unit tests (planned)
+    * Commotion Config File Editor (planned)
+	  * unit tests (planned)
+    * Setup Wizard (planned)
+	  * unit tests (planned)
+    * User Settings [applications] (planned)
+	  * unit tests (planned)
+    * User Settings [Serval & Security] (planned)
+	  * unit tests (planned)
+    * Application Viewer (planned)
+	  * unit tests (planned)
+    * Application Advertiser (planned)
+	  * unit tests (planned)
+    * Welcome Page (planned)
+	* Crash Window
+	  * unit tests (planned)
+	* Network Status overview (planned)
+ 	  * unit tests (planned)
+  * Setting menu
+    * unit tests (planned)
+	* Core application settings
+	  * unit tests (planned)
+	* User settings
+	  * unit tests (planned)
+	* Extension settings menu
+	  * unit tests (planned)
+	  * Settings for any extensions with custom settings pages
+  * Commotion Service Manager integration
+    * unit tests (planned)
+	* CSM python bindings
+	* Threaded messaging to CSM (planned)
+	* Application viewer (planned)
+	* Application advertiser (planned)
+  * Commotion Controller
+    * unit tests (planned)
+	* Threaded messaging (planned)
+	* Messaging objects to pass to extensions (planned)
+	* Network agent interceptor [for extending commotiond functionality across platforms] (planned)
+	* Commotiond integration (planned)
+  * Control Panel settings menu
+    * A client agnostic control panel tool for mesh-network settings in an operating systems generic control panel. (planned)
+	* unit tests (planned)
+  * Linux Support (planned)
+  * Windows Support (planned LONGTERM)
+  * OSX Support (planned LONGTERM)
+  * Commotion Human Interface Guidelines compliant interface (planned)
+  * In-Line Documentation tranlation into developer API (planned)
+  
+  
+	

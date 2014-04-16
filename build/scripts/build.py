@@ -3,7 +3,7 @@
 
 import os
 import sys
-import compileUiFiles
+import compile_ui
 import fnmatch
 
 def clean():
@@ -22,7 +22,7 @@ def clean():
 def build():
     #compile the forms
     try:
-        compileUiFiles.compileUiFiles()
+        compile_ui.compileUiFiles()
     except Exception as e:
         sys.exit(e)
 
