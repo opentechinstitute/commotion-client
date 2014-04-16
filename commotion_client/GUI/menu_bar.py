@@ -36,6 +36,7 @@ class MenuBar(QtGui.QWidget):
         #set function logger
         self.log = logging.getLogger("commotion_client."+__name__)
         self.translate = QtCore.QCoreApplication.translate
+        self.ext_mgr = ExtensionManager()
         try:
             self.populate_menu()
         except (NameError, AttributeError) as _excpt:
@@ -70,14 +71,9 @@ class MenuBar(QtGui.QWidget):
         if not self.layout.isEmpty():
             self.clear_layout(self.layout)
         menu_items = {}
-        ext_mgr = ExtensionManager()
-        #extensions = ext_mgr.get_installed().keys()
-        extensions = None
-        ext_mgr.load_core()
-        if not extensions:
-            ext_mgr.load_core()
-            extensions = ext_mgr.get_installed().keys()
-
+        if not self.ext_mgr.check_installed():
+            self.ext_mgr.init_extension_libraries()
+        extensions = self.ext_mgr.get_installed().keys()
         if extensions:
             top_level = self.get_parents(extensions)
             for top_level_item in top_level:
@@ -117,7 +113,7 @@ class MenuBar(QtGui.QWidget):
         parents = []
         for ext in extension_list:
             try:
-                parent = ExtensionManager.get_property(ext, "parent")
+                parent = self.ext_mgr.get_property(ext, "parent")
             except KeyError:
                 self.log.debug(self.translate("logs", "Config for {0} does not contain a {1} value. Setting {1} to default value.".format(ext, "parent")))
                 parent = "Extensions"
@@ -135,7 +131,7 @@ class MenuBar(QtGui.QWidget):
         Returns:
         A tuple containing a top level button and its hidden sub-menu items.        
         """
-        extensions = ExtensionManager.get_extension_from_property(parent, 'parent')
+        extensions = self.ext_mgr.get_extension_from_property('parent', parent)
         if not extensions:
             raise NameError(self.translate("logs", "No extensions found under the parent item {0}.".format(parent)))
         #Create Top level item button
@@ -148,10 +144,10 @@ class MenuBar(QtGui.QWidget):
         for ext in extensions:
             sub_menu_item = subMenuWidget(self)
             try:
-                menu_item_title = ExtensionManager.get_property(ext, 'menu_item')
+                menu_item_title = self.ext_mgr.get_property(ext, 'menu_item')
             except KeyError:
                 menu_item_title = ext
-            subMenuItem.setText(QtCore.QCoreApplication.translate("Sub-Menu Item", menu_item_title))
+            sub_menu_item.setText(QtCore.QCoreApplication.translate("Sub-Menu Item", menu_item_title))
             #We use partial here to pass a variable along when we attach the "clicked()" signal to the MenuBars requestViewport function
             sub_menu_item.clicked.connect(partial(self.request_viewport, ext))
             sub_menu_layout.addWidget(sub_menu_item)
