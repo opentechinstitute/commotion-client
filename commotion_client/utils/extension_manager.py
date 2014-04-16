@@ -101,9 +101,14 @@ class ExtensionManager(object):
         #create directory structures if needed
         self.init_libraries()
         #load core and move to global if needed
+        self.log.debug(self.libraries)
         self.load_core()
         #Load all extension configs found in libraries
-        self.init_extension_config()
+        for name, path in self.libraries.items():
+            self.log(path)
+            self.log(QtCore.QDir(path).entryInfoList())
+            if QtCore.QDir(path).entryInfoList() != []:
+                self.init_extension_config(name)
         #install all loaded config's with the existing settings
         self.install_loaded()
 
@@ -131,6 +136,7 @@ class ExtensionManager(object):
         #==== Core ====#
         _app_path = QtCore.QDir(QtCore.QCoreApplication.applicationDirPath())
         _app_path.cd("extensions")
+        _app_path.cd("core")
         #set the core extension directory
         self.libraries['core'] = _app_path.absolutePath()
         self.log.debug(self.translate("logs", "Core extension directory succesfully set."))
@@ -154,15 +160,17 @@ class ExtensionManager(object):
             'linux': {
                 'user':os.path.join(".Commotion", "extension_data"),
                 'user_root': QtCore.QDir.home(),
-                'global':os.path.join("usr", "share", "Commotion", "extension_data"),
-                'global_root' : QtCore.QDir.root()}}
+                'global':os.path.join("extensions", "global"),
+                'global_root' : QtCore.QDir(QtCore.QCoreApplication.applicationDirPath())}}
         for path_type in ['user', 'global']:
             ext_dir = platform_dirs[platform][path_type+'_root']
             ext_path = platform_dirs[platform][path_type]
+            self.log.debug(self.translate("logs", "The root directory of {0} is {1}.".format(path_type, ext_dir.path())))
             #move the root directory to the correct sub-path.
-            ext_dir.cd(ext_path)
+            lib_path = ext_dir.filePath(ext_path)
+            self.log.debug(self.translate("logs", "The extension directory has been set to {0}..".format(lib_path)))
             #Set the extension directory.
-            self.libraries[path_type] = ext_dir.absolutePath()
+            self.libraries[path_type] = lib_path
 
     def init_libraries(self):
         """Creates a library folder, if it does not exit, in the directories specified for the current user and for the global application. """
@@ -178,7 +186,9 @@ class ExtensionManager(object):
                 if ext_dir.mkpath(ext_dir.absolutePath()):
                     self.log.debug(self.translate("logs", "Created the {0} extension library at {1}".format(path_type, str(ext_dir.absolutePath()))))
                 else:
-                    raise IOError(self.translate("logs", "Could not create the user extension library for {0}.".format(path_type)))
+                    self.log.debug(ext_dir.mkpath(ext_dir.absolutePath()))
+                    self.log.debug(ext_dir.exists(ext_dir.absolutePath()))
+                    raise IOError(self.translate("logs", "Could not create the extension library for {0}.".format(path_type)))
             else:
                 self.log.debug(self.translate("logs", "The extension library at {0} already existed for {1}".format(str(ext_dir.absolutePath()), path_type)))
 
@@ -189,7 +199,7 @@ class ExtensionManager(object):
           ext_type (string): A specific extension type to load/reload a config object from. [global, user, or core]. If not provided, defaults to all.
 
         Raises:
-          ValueError: If the extension type passed is not either [core, global, or user] or is to an empty or invalid path.
+          ValueError: If the extension type passed is not either [core, global, or user]
         """
         self.log.debug(self.translate("logs", "Initializing {0} extension configs..".format(ext_type)))
         extension_types = ['user', 'global', 'core']
@@ -200,9 +210,14 @@ class ExtensionManager(object):
                 raise ValueError(self.translate("logs", "{0} is not an acceptable extension type.".format(ext_type)))
         for type_ in extension_types:
             try:
+                self.log.debug(self.translate("logs", "Creating  {0} config manager".format(type_)))
                 self.extensions[type_] = ConfigManager(self.libraries[type_])
             except ValueError:
-                raise
+                self.log.debug(self.translate("logs", "There were no extensions found for the {0} library.".format(type_)))
+                continue
+            except KeyError:
+                self.log.debug(self.translate("logs", "There were no library path found for the {0} library.".format(type_)))
+                continue
             self.log.debug(self.translate("logs", "Configs for {0} extension library loaded..".format(type_)))
 
     def check_installed(self, name=None):

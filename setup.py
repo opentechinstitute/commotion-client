@@ -65,7 +65,7 @@ core_extensions = ["config_editor"]
 # Add core_extensions to core packages.
 for ext in core_extensions:
     ext_loc = os.path.join("build", "resources", ext)
-    asset_loc = os.path.join("extensions", ext)
+    asset_loc = os.path.join("extensions", "core", ext)
     all_assets.append((ext_loc, asset_loc))
 
 
