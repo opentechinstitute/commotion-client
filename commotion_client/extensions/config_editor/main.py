@@ -31,11 +31,25 @@ class ViewPort(Ui_config_manager.ViewPort):
     start_report_collection = QtCore.pyqtSignal()
     data_report = QtCore.pyqtSignal(str, dict)
     error_report = QtCore.pyqtSignal(str)
+    clean_up = QtCore.pyqtSignal()
+    on_stop = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__()
+        self.log = logging.getLogger("commotion_client."+__name__)
+        self.translate = QtCore.QCoreApplication.translate
         self.setupUi(self)
         self.start_report_collection.connect(self.send_signal)
+        self._dirty = False
+        
+        
+    @property
+    def is_dirty(self):
+        """The current state of the viewport object """
+        return self._dirty
+        
+    def clean_up(self):
+        self.on_stop.emit()
 
     def send_signal(self):
         self.data_report.emit("myModule", {"value01":"value", "value02":"value", "value03":"value"})

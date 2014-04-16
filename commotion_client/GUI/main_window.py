@@ -43,9 +43,10 @@ class MainWindow(QtGui.QMainWindow):
 
         self.init_crash_reporter()
         self.setup_menu_bar()
-        
+        #Setup extension manager for viewports
+        self.ext_manager = extension_manager.ExtensionManager()
         self.viewport = welcome_page.ViewPort(self)
-        self.load_viewport()
+        self.load_viewport(self.viewport)
         
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
         try:
@@ -101,13 +102,19 @@ class MainWindow(QtGui.QMainWindow):
 
     def set_viewport(self):
         """Load and set viewport to next viewport and load viewport """
-        ext_manager = extension_manager.ExtensionManager
-        self.viewport = ext_manager.import_extension(self.next_viewport).ViewPort(self)
-        self.load_viewport()
+        self.log.info(self.next_extension)
+        next_view = self.next_extension
+        next_viewport = self.ext_manager.load_user_interface(str(next_view), "main")
+        viewport_object = next_viewport(self)
+        self.load_viewport(viewport_object)
         
-    def load_viewport(self):
+    def load_viewport(self, viewport):
         """Apply current viewport to the central widget and set up proper signal's for communication. """
-        self.setCentralWidget(self.viewport)
+        testme = self.setCentralWidget(viewport)
+        self.viewport = viewport
+        self.viewport.show()
+        self.log.info(testme)
+        self.log.info(self.centralWidget())
 
         #connect viewport extension to crash reporter
         self.viewport.data_report.connect(self.crash_report.crash_info)
@@ -122,7 +129,7 @@ class MainWindow(QtGui.QMainWindow):
     def change_viewport(self, viewport):
         """Prepare next viewport for loading and start loading process when ready."""
         self.log.debug(self.translate("logs", "Request to change viewport received."))
-        self.next_viewport = viewport
+        self.next_extension = viewport
         if self.viewport.is_dirty:
             self.viewport.on_stop.connect(self.set_viewport)
             self.clean_up.emit()

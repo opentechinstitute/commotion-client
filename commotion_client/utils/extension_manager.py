@@ -60,6 +60,7 @@ class ExtensionManager(object):
         self.translate = QtCore.QCoreApplication.translate
         self.extensions = {}
         self.libraries = {}
+        self.set_library_defaults()
         self.user_settings = self.get_user_settings()
         self.config_keys = ["name",
                             "main",
@@ -96,8 +97,6 @@ class ExtensionManager(object):
     def init_extension_libraries(self):
         """This function bootstraps the Commotion client when the settings are not populated on first boot or due to error. It iterates through all extensions in the core client and loads them."""
         
-        #set default library paths
-        self.set_library_defaults()
         #create directory structures if needed
         self.init_libraries()
         #load core and move to global if needed
@@ -105,8 +104,6 @@ class ExtensionManager(object):
         self.load_core()
         #Load all extension configs found in libraries
         for name, path in self.libraries.items():
-            self.log(path)
-            self.log(QtCore.QDir(path).entryInfoList())
             if QtCore.QDir(path).entryInfoList() != []:
                 self.init_extension_config(name)
         #install all loaded config's with the existing settings
@@ -257,7 +254,10 @@ class ExtensionManager(object):
         _settings = self.user_settings
         extensions = _settings.childGroups()
         for ext in extensions:
-            installed_extensions[ext] = _settings.value(ext+"/type")
+            _type = _settings.value(ext+"/type")
+            ext_dir = QtCore.QDir(self.libraries[_type])
+            if ext_dir.exists(ext):
+                installed_extensions[ext] = _type
         self.log.debug(self.translate("logs", "The following extensions are installed: [{0}].".format(extensions)))
         return installed_extensions
             
@@ -278,6 +278,9 @@ class ExtensionManager(object):
                 #Check if the extension is in the globals
                 global_extensions = list(self.extensions['global'].configs.keys())
                 if ext['name'] in global_extensions:
+                    self.log.debug(self.translate("logs", "Core extension {0} was found in the global extension list.".format(ext['name'])))
+                    if not _global_dir.exists(ext['name']):
+                        raise KeyError(self.translate("Extension {0} was found in the extension list, but it did not exist in the actual library. Loading it to global.".format(ext['name'])))
                     continue
             except KeyError:
                 #If extension not loaded in globals it will raise a KeyError
@@ -286,9 +289,9 @@ class ExtensionManager(object):
                 self.log.info(self.translate("logs", "Core extension {0} was missing from the global extension directory. Copying it into the global extension directory from the core now.".format(ext['name'])))
                 #Copy extension into global directory
                 if QtCore.QFile(_core_ext_path).copy(_global_ext_path):
-                    self.log.debug(self.translate("logs", "Extension config successfully copied."))
+                    self.log.debug(self.translate("logs", "Extension successfully copied."))
                 else:
-                    self.log.debug(self.translate("logs", "Extension config was not copied."))
+                    self.log.debug(self.translate("logs", "Extension was not copied."))
                 _reload_globals = True
         if _reload_globals == True:
             self.init_extension_config("global")
@@ -414,7 +417,7 @@ class ExtensionManager(object):
             raise AttributeError(self.translate("logs", "Attempted to get a user interface of an invalid type."))
         _config = self.get_config(extension_name)
         try:
-            if _config['initialized'] != True:
+            if _config['initialized'] != 'true':
                 self.log.debug(self.translate("logs", "Extension manager attempted to load a user interface from uninitalized extension {0}. Uninitialized extensions cannot be loaded. Try installing/initalizing the extension first.".format(extension_name)))
                 raise AttributeError(self.translate("logs", "Attempted to load a user interface from an uninitialized extension."))
         except KeyError:
@@ -424,17 +427,18 @@ class ExtensionManager(object):
         ui_file = _config[gui]
         _type = self.get_property(extension_name, "type")
         extension_path = os.path.join(self.libraries[_type], extension_name)
-        #Get the extension 
+        self.log.debug(extension_path)
+        #Get the extension
         extension = zipimport.zipimporter(extension_path)
         #add extension to sys path so imported modules can access other modules in the extension.
         sys.path.append(extension_path)
         user_interface = extension.load_module(ui_file)
         if gui == "toolbar":
-            return user_interface.ToolBar()
+            return user_interface.ToolBar
         elif gui == "main":
-            return user_interface.ViewPort()
+            return user_interface.ViewPort
         elif gui == "settings":
-            return user_interface.SettingsMenu()
+            return user_interface.SettingsMenu
 
     def get_config(self, name):
         """Returns a config from an installed extension.
@@ -443,7 +447,7 @@ class ExtensionManager(object):
           name (string): An extension name.
         
         Returns:
-          A config (dictionary) for an extension.
+          A config (dictionary)for an extension.
         
         Raises:
           KeyError: If an installed extension of the specified name does not exist.
@@ -605,7 +609,7 @@ class ExtensionManager(object):
             _settings.setValue("tests", "tests")
         #Write extension type
         _settings.setValue("type", extension_type)
-        _settings.setValue("initialized", True)
+        _settings.setValue("initialized", 'true')
         _settings.endGroup()
         return True
 
