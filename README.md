@@ -34,70 +34,55 @@ This repository is in active development. **IT DOES NOT WORK!** Please look at t
 		
 ###Current Roadmap:
 
+#### Version 1.0
+
   * Core application
     * Single application support
     * Cross-application instance messaging
     * Crash reporting 
-	  * With PGP encryption to the Commotion Team (planned)
-	* unit tests (planned)
+	  * With PGP encryption to the Commotion Team
+      * Crash Reporting Window
   * Main Window
-    * unit tests (planned)
   * Menu Bar
-    * Automatically displays all core and user loaded extensions (planned)
-	* Unit Tests (planned)
+    * Automatically displays all core and user loaded extensions 
   * Task Bar
-    * unit tests (planned)
   * Extension Manager
-    * unit tests (planned)
+  * Messaging manager
+    * Allow extensions to talk to commotion IPC client
+      * CSM and Commotiond support
   * Core Extensions
-    * Network vizualizer (planned)
-	  * unit tests (planned)
-    * Commotion Config File Editor (planned)
-	  * unit tests (planned)
-    * Setup Wizard (planned)
-	  * unit tests (planned)
-    * User Settings [applications] (planned)
-	  * unit tests (planned)
-    * User Settings [Serval & Security] (planned)
-	  * unit tests (planned)
-    * Application Viewer (planned)
-	  * unit tests (planned)
-    * Application Advertiser (planned)
-	  * unit tests (planned)
-    * Welcome Page (planned)
-	* Crash Window
-	  * unit tests (planned)
-	* Network Status overview (planned)
- 	  * unit tests (planned)
+    * Commotion Config File Editor 
+    * Setup Wizard (basic config walkthough)
+    * Application Viewer
+    * Application Advertiser
+    * Welcome Page
+	* Network Security Menu
+	* Network Status overview 
   * Setting menu
-    * unit tests (planned)
 	* Core application settings
-	  * unit tests (planned)
-	* User settings
-	  * unit tests (planned)
 	* Extension settings menu
-	  * unit tests (planned)
 	  * Settings for any extensions with custom settings pages
-  * Commotion Service Manager integration
-    * unit tests (planned)
-	* CSM python bindings
-	* Threaded messaging to CSM (planned)
-	* Application viewer (planned)
-	* Application advertiser (planned)
-  * Commotion Controller
-    * unit tests (planned)
-	* Threaded messaging (planned)
-	* Messaging objects to pass to extensions (planned)
-	* Network agent interceptor [for extending commotiond functionality across platforms] (planned)
-	* Commotiond integration (planned)
   * Control Panel settings menu
-    * A client agnostic control panel tool for mesh-network settings in an operating systems generic control panel. (planned)
-	* unit tests (planned)
-  * Linux Support (planned)
-  * Windows Support (planned LONGTERM)
-  * OSX Support (planned LONGTERM)
-  * Commotion Human Interface Guidelines compliant interface (planned)
-  * In-Line Documentation tranlation into developer API (planned)
+    * A client agnostic control panel tool for mesh-network settings in an operating systems generic control panel. 
+  * Linux Support
+  * Commotion Human Interface Guidelines compliant interface 
+  * In-Line Documentation tranlation into developer API 
+  * User Settings Manager
+    * un-encrypted user settings for network configuration
+
+#### Version 2.0
+
+  * Setting menu
+	* User settings
+  * Core Extensions
+    * Network vizualizer 
+    * User Settings [applications]
+    * User Settings [Serval & Security] 
+	* REMOVE Network Security Menu as it will be replaced with user settings
+  * User Settings Manager
+    * GPG Encrypted user settings
+	* multi-user login/logout support
   
-  
-	
+### Version 3+.0
+  * Windows Support
+  * OSX Support
