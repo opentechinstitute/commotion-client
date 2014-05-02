@@ -6,7 +6,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 #Commotion Client Imports
-from commotion_client.assets import commotion_assets_rc
+import commotion_assets_rc
 
 class TrayIcon(QtGui.QWidget):
     """

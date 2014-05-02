@@ -19,11 +19,13 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 #Commotion Client Imports
-from commotion_client.assets import commotion_assets_rc
+import commotion_assets_rc
 from commotion_client.GUI.menu_bar import MenuBar
 from commotion_client.GUI.crash_report import CrashReport
 from commotion_client.GUI import welcome_page
+from commotion_client.GUI import toolbar_builder
 from commotion_client.utils import extension_manager
+
 
 class MainWindow(QtGui.QMainWindow):
     """
@@ -45,8 +47,8 @@ class MainWindow(QtGui.QMainWindow):
         self.setup_menu_bar()
         #Setup extension manager for viewports
         self.ext_manager = extension_manager.ExtensionManager()
-        self.viewport = welcome_page.ViewPort(self)
-        self.load_viewport(self.viewport)
+        self.viewport = welcome_page.ViewPort
+        self.apply_viewport(self.viewport)
         
         #Default Paramiters #TODO to be replaced with paramiters saved between instances later
         try:
@@ -104,18 +106,39 @@ class MainWindow(QtGui.QMainWindow):
         """Load and set viewport to next viewport and load viewport """
         self.log.info(self.next_extension)
         next_view = self.next_extension
-        next_viewport = self.ext_manager.load_user_interface(str(next_view), "main")
-        viewport_object = next_viewport(self)
-        self.load_viewport(viewport_object)
+        ext_viewport = self.ext_manager.load_user_interface(str(next_view), "main")
+        ext_toolbar = self.ext_manager.load_user_interface(str(next_view), "toolbar")
+        self.apply_viewport(ext_viewport, ext_toolbar)
         
-    def load_viewport(self, viewport):
+    def apply_viewport(self, viewport, toolbar=None):
         """Apply current viewport to the central widget and set up proper signal's for communication. """
-        testme = self.setCentralWidget(viewport)
-        self.viewport = viewport
-        self.viewport.show()
-        self.log.info(testme)
-        self.log.info(self.centralWidget())
+        #Create central widget (replaced due to splitter)
+        #        self.central_widget = QtGui.QWidget(self)
+        self.central_widget = QtGui.QSplitter(QtCore.Qt.Vertical, self)
+        self.viewport = viewport(self.central_widget)
+        if not toolbar:
+            toolbar = False
+        self.toolbar = self.init_toolbar(toolbar)
 
+        #Set up central layout (Replaced due to splitter)
+        #self.central_layout = QtGui.QVBoxLayout(self.central_widget)
+
+        self.scroll_area = QtGui.QScrollArea(self.central_widget)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.viewport)
+
+        #add scroll area to central layout (replaced due to splitter)
+        #self.central_layout.addWidget(self.scroll_area)
+
+        self.central_widget.addWidget(self.scroll_area)
+        self.central_widget.addWidget(self.toolbar)
+        
+        self.setCentralWidget(self.central_widget)
+        self.init_viewport_signals()
+        self.central_widget.show()
+        self.viewport.show()
+
+    def init_viewport_signals(self):
         #connect viewport extension to crash reporter
         self.viewport.data_report.connect(self.crash_report.crash_info)
         self.crash_report.crash_override.connect(self.viewport.start_report_collection)
@@ -136,6 +159,12 @@ class MainWindow(QtGui.QMainWindow):
         else:
             self.set_viewport()
 
+    def init_toolbar(self, ext_toolbar):
+        """ """
+        toolbar = toolbar_builder.ToolBar(self.central_widget,  self.viewport, ext_toolbar,)
+        return toolbar
+        
+            
     def purge(self):
         """
         Closes the menu and sets its data up for immediate removal.

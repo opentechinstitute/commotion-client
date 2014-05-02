@@ -49,7 +49,7 @@ icon = "commotion_client/assets/images/logo32.png"
 core_pkgs = ["commotion_client", "utils", "GUI", "assets"]
 
 # Include compiled assets file.
-assets_file = os.path.join("commotion_client", "assets", "commotion_assets_rc.py")
+assets_file = os.path.join("build", "resources", "commotion_assets_rc.py")
 # Place compiled assets file into the root directory.
 include_assets = (assets_file, "commotion_assets_rc.py")
 all_assets = [include_assets]

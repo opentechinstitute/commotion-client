@@ -19,6 +19,9 @@ import sys
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+
+from commotion_client.GUI import extension_toolbar
+
 #import python modules created by qtDesigner and converted using pyuic4
 #from extensions.core.config_manager.ui import Ui_config_manager.py
 from ui import Ui_config_manager
@@ -42,7 +45,6 @@ class ViewPort(Ui_config_manager.ViewPort):
         self.start_report_collection.connect(self.send_signal)
         self._dirty = False
         
-        
     @property
     def is_dirty(self):
         """The current state of the viewport object """
@@ -58,3 +60,8 @@ class ViewPort(Ui_config_manager.ViewPort):
         """HI"""
         self.error_report.emit("THIS IS AN ERROR MESSAGE!!!")
         pass
+
+
+
+class ToolBar(extension_toolbar.ExtensionToolBar):
+    pass
