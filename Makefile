@@ -33,6 +33,6 @@ tests: build
 
 clean:
 	python3.3 build/scripts/build.py clean
-	rm -fr build/resources/* || true
+	rm -fr build/resources || true
 	rm -fr build/exe.* || true
 	rm -fr tests/temp/* || true
