@@ -17,7 +17,7 @@
    <string>Commotion Error</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../assets/commotion_assets.qrc">
+   <iconset>
     <normaloff>:/alert32.png</normaloff>:/alert32.png</iconset>
   </property>
   <widget class="QWidget" name="verticalLayoutWidget">
@@ -29,7 +29,7 @@
      <height>501</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,0,0,0,1">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,0,0,0,0">
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
@@ -38,12 +38,19 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../assets/commotion_assets.qrc">:/alert48.png</pixmap>
+         <pixmap>:/alert48.png</pixmap>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QLabel" name="sorry_label">
+        <property name="font">
+         <font>
+          <pointsize>18</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="text">
          <string>Sorry!</string>
         </property>
@@ -79,7 +86,7 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <property name="spacing">
-       <number>6</number>
+       <number>4</number>
       </property>
       <item>
        <widget class="QLabel" name="error_text">
@@ -93,7 +100,7 @@
          <string>Commotion has experienced an unknown error.</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
         </property>
         <property name="margin">
          <number>1</number>
@@ -130,8 +137,14 @@
     </item>
     <item>
      <widget class="QCheckBox" name="send_report">
+      <property name="autoFillBackground">
+       <bool>false</bool>
+      </property>
       <property name="text">
-       <string>Send a report to the commotion team.</string>
+       <string>Send a report to the Commotion team.</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
@@ -144,7 +157,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -166,6 +179,8 @@
          </size>
         </property>
        </widget>
+       <zorder>comment_field</zorder>
+       <zorder></zorder>
       </widget>
       <widget class="QWidget" name="tab_2">
        <attribute name="title">
@@ -218,7 +233,7 @@
            <property name="lineWidth">
             <number>0</number>
            </property>
-           <property name="numDigits">
+           <property name="digitCount">
             <number>1</number>
            </property>
            <property name="intValue" stdset="0">
@@ -249,9 +264,22 @@
       <item>
        <widget class="QPushButton" name="quit_button">
         <property name="text">
-         <string>Quit Commotion</string>
+         <string>Quit</string>
         </property>
        </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_4">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
       <item>
        <widget class="QPushButton" name="restart_button">
@@ -259,6 +287,19 @@
          <string>Restart Commotion</string>
         </property>
        </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>29</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
     </item>
