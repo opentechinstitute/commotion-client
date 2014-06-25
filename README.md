@@ -1,3 +1,4 @@
+[![alt tag](http://img.shields.io/badge/maintainer-technosopher-lightgray.svg)](https://github.com/technosopher)
 ##Commotion Client (UNSTABLE)
 
 The Commotion Wireless desktop/laptop client.
